@@ -3,16 +3,14 @@ from yt_downloader import YouTubeDownloader
 import subprocess
 import os
 import json
+import file_util
 
-OUTPUT_PATH = "C:\\Users\\donal\\OneDrive\\Documents\\Covers-Archive-Worker\\output_video"
-TARGET_CLOUD_PATH = "Cloudflare R2:vtuber-rabbit-hole-archive/VTuber Covers Archive"
-RCLONE_PATH = "C:\\Users\\donal\\OneDrive\\Documents\\Covers-Archive-Worker\\rclone-v1.62.2-windows-amd64\\rclone.exe"
-
+CONFIG = file_util.read_config("C:\\Users\\donal\\OneDrive\\Desktop\Covers-Worker\\config.ini")
 
 def rclone_to_cloud():
-    subprocess.run(f'{RCLONE_PATH} -P copy "{OUTPUT_PATH}" "{TARGET_CLOUD_PATH}"')
+    subprocess.run(f'{CONFIG.get("rclone_path")} -P copy "{CONFIG.get("path","download_output_path")}" "{CONFIG.get("path","rclone_cloud_target")}"')
 
-def clear_output_folder(file_path: str = OUTPUT_PATH):
+def clear_output_folder(file_path: str = CONFIG.get("path","download_output_path")):
     for file in os.listdir(file_path):
         os.remove(f"{file_path}\\{file}")
 
@@ -34,7 +32,7 @@ def main():
     downloader = YouTubeDownloader("download_list.txt")
     if input() == "y":
         downloader.download_urls()
-        data_converter.convert_all_mkv_to_webm(OUTPUT_PATH)
+        data_converter.convert_all_mkv_to_webm(CONFIG.get("path","download_output_path"))
     print("Download Complete... Ready to generate csv data (y/n)")
     data_converter.generate_json_data("output_video", ".webm") if input() == "y" else print("Skipping...")
     print("JSON Data Generated... Upload to Cloud? (y/n)")
