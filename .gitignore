@@ -1,0 +1,6 @@
+rclone-v1.62.2-windows-amd64
+drive_queue
+output_video
+__pycache__
+CoversArchive/*
+yt-dlp.exe
