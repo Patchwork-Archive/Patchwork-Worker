@@ -1,6 +1,9 @@
 rclone-v1.62.2-windows-amd64
+logs
 drive_queue
-output_video
+.vscode/
+download_list.txt
+output_video/
 CoversArchive/
 yt-dlp.exe
 # Byte-compiled / optimized / DLL files
