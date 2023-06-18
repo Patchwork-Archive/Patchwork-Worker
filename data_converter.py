@@ -2,9 +2,7 @@ import os
 import subprocess
 import json
 from tqdm import tqdm
-from datetime import datetime
 
-GIT_REPO = "C:\\Users\\donal\\OneDrive\\Documents\\Covers-Archive-Worker\\CoversArchive"
 def get_all_files_in_directory(directory: str, file_type: str = ""):
     """
     Get all files in a directory if file_type is empty str then find all files
@@ -53,19 +51,15 @@ def download_video_data(url: str):
     json_obj = {"video_id": vid_id, "title": vid_title, "channel_id":channel_id, "uploader": uploader, "upload_date": vid_date, "description": description, "channel_name": channel_name}
     return json.dumps(json_obj, ensure_ascii=False)+"\n"
 
-def commit_to_github():
-    subprocess.run(f"git add {GIT_REPO}")
-    subprocess.run(f"git commit -m \"Update {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\"")
-    print(f"git commit -m \"Update {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\"")
-    print("Push to GitHub? (y/n)")
-    subprocess.run("git push") if input() == "y" else print("Skipping...")
+def commit_and_push(repo_path: str, commit_message: str):
+    subprocess.run(['git', '-C', repo_path, 'checkout', 'main'])
+    subprocess.run(['git', '-C', repo_path, 'add', '.'])
+    subprocess.run(['git', '-C', repo_path, 'commit', '-m', commit_message])
+    subprocess.run(['git', '-C', repo_path, 'push'])
 
-
-def generate_json_data(input_directory: str, file_type: str):
-    output_file = open("CoversArchive/covers.ndjson", "a", encoding="utf-8")
-    files = get_all_files_in_directory(input_directory, file_type)
+def generate_json_data(video_input_dir: str, file_type: str, ndjson_path: str):
+    output_file = open(ndjson_path, "a", encoding="utf-8")
+    files = get_all_files_in_directory(video_input_dir, file_type)
     for file in tqdm(files, desc="Processing files", unit="file"):
         output_file.write(download_video_data(file))
     output_file.close()
-
-

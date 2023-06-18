@@ -1,17 +1,16 @@
 import subprocess
 import os
 from tqdm import tqdm
-import csv
 import requests
 
-MAXIMUM_FILE_SIZE_BYTES = 500000000
+MAXIMUM_FILE_SIZE_BYTES = 500000000 # 500 MB. Extra check here to make sure we don't download a file that is too big
 
 
 class YouTubeDownloader:
 
     def __init__(self, download_list_file: str, log_skip_file: str = "logs/skipped.txt",
                  log_deleted_file: str = "logs/deleted.txt", output_dir="output_video"):
-        self._LOG_SKIP_FILE = log_skip_file
+        self._LOG_SKIP_FILE = log_skip_file 
         self._LOG_DELETED_FILE = log_deleted_file
         self._download_list_file = download_list_file
         self._output_dir = output_dir
@@ -84,19 +83,4 @@ class YouTubeDownloader:
                                 _extract_video_id_from_url(url))
                     _download_youtube_url(
                         _extract_video_id_from_url(row.strip()))
-
-        def _download_urls_csv(vid_id_col: int = 3):
-            """
-            Download urls from a csv file, assumes 3rd column is the video id. Ragtag format
-            """
-            with open(self._download_list_file, 'r', encoding="utf-8") as f:
-                reader = csv.reader(f)
-                num_rows = sum(1 for _ in reader)
-                f.seek(0)
-                for row in tqdm(reader, total=num_rows):
-                    _download_youtube_url(row[vid_id_col])
-
-        if self._download_list_file.endswith(".csv"):
-            _download_urls_csv()
-        else:
-            _download_urls_txt()
+        _download_urls_txt()
