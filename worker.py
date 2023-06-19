@@ -6,13 +6,14 @@ from input_enums import Options
 from datetime import datetime
 
 CONFIG = file_util.read_config(
-    "C:\\Users\\donal\\OneDrive\\Desktop\Covers-Worker\\config.ini"
+    "config.ini",
 )
 
 
 def rclone_to_cloud():
     subprocess.run(
-        f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","download_output_path")}" "{CONFIG.get("path","rclone_cloud_target")}"'
+        f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","download_output_path")}" "{CONFIG.get("path","rclone_cloud_target")}"',
+        shell=True,
     )
 
 
@@ -39,7 +40,9 @@ def download_and_upload():
         CONFIG.get("path", "download_output_path")
     ) if input() == "y" else print("Skipping...")
     print("Download Videos? (y/n)")
-    downloader = YouTubeDownloader("download_list.txt")
+    downloader = YouTubeDownloader(
+        "download_list.txt", CONFIG.get("path", "download_output_path")
+    )
     if input() == "y":
         downloader.download_urls()
         data_converter.convert_all_mkv_to_webm(
@@ -47,7 +50,7 @@ def download_and_upload():
         )
     print("Download Complete... Ready to generate ndjson data (y/n)")
     data_converter.generate_json_data(
-        video_input_dir="output_video",
+        video_input_dir=CONFIG.get("path", "download_output_path"),
         file_type=".webm",
         ndjson_path=CONFIG.get("path", "ndjson_path"),
     ) if input() == "y" else print("Skipping...")

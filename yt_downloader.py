@@ -10,9 +10,9 @@ class YouTubeDownloader:
     def __init__(
         self,
         download_list_file: str,
+        output_dir,
         log_skip_file: str = "logs/skipped.txt",
         log_deleted_file: str = "logs/deleted.txt",
-        output_dir="output_video",
     ):
         self._LOG_SKIP_FILE = log_skip_file
         self._LOG_DELETED_FILE = log_deleted_file
@@ -63,10 +63,11 @@ class YouTubeDownloader:
             output_path = os.path.join(self._output_dir, f"{url_id}")
             print(
                 "Executing",
-                f'yt-dlp {url}{url_id} -f bestvideo[height<=1080][ext=webm]+bestaudio -o "{self._output_dir}/%(id)s.%(ext)s" --add-metadata',
+                f'yt-dlp {url}{url_id} -f "bestvideo[height<=1080][ext=webm]+bestaudio" -o "{self._output_dir}/%(id)s.%(ext)s" --add-metadata',
             )
             subprocess.run(
-                f'yt-dlp {url}{url_id} -f bestvideo[height<=1080][ext=webm]+bestaudio -o "{self._output_dir}/%(id)s.%(ext)s" --add-metadata'
+                f'yt-dlp {url}{url_id} -f "bestvideo[height<=1080][ext=webm]+bestaudio" -o "{self._output_dir}/%(id)s.%(ext)s" --add-metadata',
+                shell=True,
             )
             try:
                 if os.path.getsize(output_path) > MAXIMUM_FILE_SIZE_BYTES:

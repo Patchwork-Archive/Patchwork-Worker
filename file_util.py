@@ -23,7 +23,7 @@ def read_config(file_path: str):
 
 def clear_output_folder(file_path: str):
     for file in os.listdir(file_path):
-        os.remove(f"{file_path}\\{file}")
+        os.remove(os.path.join(file_path, file))
 
 
 class NDJsonReader:

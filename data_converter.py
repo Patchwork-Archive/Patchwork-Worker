@@ -39,7 +39,8 @@ def download_video_data(url: str):
         return description.replace("\n", " \\n")
 
     subprocess.run(
-        f"yt-dlp --write-info-json -o temp --skip-download {reformat_url(url)}"
+        f"yt-dlp --write-info-json -o temp --skip-download {reformat_url(url)}",
+        shell=True,
     )
     video_obj = json.loads(open("temp.info.json", "r", encoding="utf-8").read())
     vid_id = video_obj["id"]
