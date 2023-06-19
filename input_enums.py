@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Options(Enum):
     SORT_VIDEOS = 1
     COMMIT_TO_REMOTE = 2

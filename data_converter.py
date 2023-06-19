@@ -3,6 +3,7 @@ import subprocess
 import json
 from tqdm import tqdm
 
+
 def get_all_files_in_directory(directory: str, file_type: str = ""):
     """
     Get all files in a directory if file_type is empty str then find all files
@@ -14,28 +15,33 @@ def get_all_files_in_directory(directory: str, file_type: str = ""):
         elif file.endswith(file_type):
             yield file
 
+
 def convert_all_mkv_to_webm(directory: str):
     """
     Converts all mkv files in a directory to webm and then deletes the mkv
     """
     for file in get_all_files_in_directory(directory, ".mkv"):
-        subprocess.run(f"ffmpeg -i {file} -c:v libvpx -crf 10 -c:a libvorbis {file.split('.')[0]}.webm")
+        subprocess.run(
+            f"ffmpeg -i {file} -c:v libvpx -crf 10 -c:a libvorbis {file.split('.')[0]}.webm"
+        )
         os.remove(file)
+
 
 def reformat_url(text: str):
     """
     Parses the url id from some text
     """
-    return "https://www.youtube.com/watch?v="+text.split(".")[:-1][0]
+    return "https://www.youtube.com/watch?v=" + text.split(".")[:-1][0]
 
 
 def download_video_data(url: str):
     def convert_description_to_single_line(description):
         return description.replace("\n", " \\n")
+
     subprocess.run(
-        f'yt-dlp --write-info-json -o temp --skip-download {reformat_url(url)}')
-    video_obj = json.loads(
-        open("temp.info.json", "r", encoding="utf-8").read())
+        f"yt-dlp --write-info-json -o temp --skip-download {reformat_url(url)}"
+    )
+    video_obj = json.loads(open("temp.info.json", "r", encoding="utf-8").read())
     vid_id = video_obj["id"]
     vid_title = video_obj["title"]
     uploader = video_obj["uploader"]
@@ -48,14 +54,24 @@ def download_video_data(url: str):
         os.remove("temp.info.json")
     except Exception:
         print("Error removing temp.info.json")
-    json_obj = {"video_id": vid_id, "title": vid_title, "channel_id":channel_id, "uploader": uploader, "upload_date": vid_date, "description": description, "channel_name": channel_name}
-    return json.dumps(json_obj, ensure_ascii=False)+"\n"
+    json_obj = {
+        "video_id": vid_id,
+        "title": vid_title,
+        "channel_id": channel_id,
+        "uploader": uploader,
+        "upload_date": vid_date,
+        "description": description,
+        "channel_name": channel_name,
+    }
+    return json.dumps(json_obj, ensure_ascii=False) + "\n"
+
 
 def commit_and_push(repo_path: str, commit_message: str):
-    subprocess.run(['git', '-C', repo_path, 'checkout', 'main'])
-    subprocess.run(['git', '-C', repo_path, 'add', '.'])
-    subprocess.run(['git', '-C', repo_path, 'commit', '-m', commit_message])
-    subprocess.run(['git', '-C', repo_path, 'push'])
+    subprocess.run(["git", "-C", repo_path, "checkout", "main"])
+    subprocess.run(["git", "-C", repo_path, "add", "."])
+    subprocess.run(["git", "-C", repo_path, "commit", "-m", commit_message])
+    subprocess.run(["git", "-C", repo_path, "push"])
+
 
 def generate_json_data(video_input_dir: str, file_type: str, ndjson_path: str):
     output_file = open(ndjson_path, "a", encoding="utf-8")
