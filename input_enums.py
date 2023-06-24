@@ -9,4 +9,4 @@ class Options(Enum):
     DOWNLOAD_AND_UPLOAD = 5
     REMOVE_DUPLICATES = 6
     EXIT = 99
-    ADD_TO_DATABASE = 8
+    ADD_TO_DATABASE = 7

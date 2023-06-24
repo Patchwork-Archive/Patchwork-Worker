@@ -5,6 +5,8 @@ import file_util
 from input_enums import Options
 from datetime import datetime
 from sql.sql_handler import SQLHandler
+from unidecode import unidecode
+from tqdm import tqdm
 
 CONFIG = file_util.read_config(
     "config.ini",
@@ -72,8 +74,11 @@ def _make_commit_message():
 
 def main():
     nd_json_reader = file_util.NDJsonReader(CONFIG.get("path", "ndjson_path"))
+    write_ndjson_to_database(nd_json_reader)
+    quit()
     download_and_upload()
     cmd = additional_commands_input()
+    
     while cmd != Options.EXIT.value:
         match cmd:
             case Options.SORT_VIDEOS.value:
@@ -99,17 +104,20 @@ def main():
         cmd = additional_commands_input()
 
 def write_ndjson_to_database(nd_json_reader: file_util.NDJsonReader):
+
     hostname = CONFIG.get("database", "host")
     user = CONFIG.get("database", "user")
     password = CONFIG.get("database", "password")
     database = CONFIG.get("database", "database")
     server = SQLHandler(host_name=hostname, user_name=user, user_password=password, database_name=database)
-    server.create_table("songs", "video_id VARCHAR(255) PRIMARY KEY, title VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci, channel_name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci, channel_id VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci, upload_date VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci, description TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci")
+    server.create_table("songs", "video_id VARCHAR(255) PRIMARY KEY, title TEXT, channel_name VARCHAR(255), channel_id VARCHAR(255), upload_date VARCHAR(255), description TEXT")
     headers = "video_id, title, channel_name, channel_id, upload_date, description"
-    for video_data in nd_json_reader.data_generator():
-        print(video_data["description"])
-        if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
+    for video_data in tqdm(nd_json_reader.data_generator()):
+        title =  video_data["title"]
+        description = video_data["description"]
+        if server.insert_row("songs", headers, (video_data["video_id"], title, video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], description)) is False:
             break
+
 
 if __name__ == "__main__":
     main()
