@@ -8,4 +8,5 @@ class Options(Enum):
     VALIDATE_NDJSON = 4
     DOWNLOAD_AND_UPLOAD = 5
     REMOVE_DUPLICATES = 6
-    EXIT = 7
+    EXIT = 99
+    ADD_TO_DATABASE = 8

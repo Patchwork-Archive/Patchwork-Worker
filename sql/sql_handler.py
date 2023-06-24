@@ -15,7 +15,7 @@ class SQLHandler:
     def _create_server_connection(self, host_name: str, user_name: str, user_password: str) -> mysql.connector:
         connection = None
         try:
-            connection = mysql.connector.connect(host=host_name, user=user_name, passwd=user_password)
+            connection = mysql.connector.connect(host=host_name, user=user_name, passwd=user_password, charset="utf8mb4")
             print("MySQL Database connection successful")
         except Error as err:
             print(f"Error: '{err}'")
@@ -66,7 +66,9 @@ class SQLHandler:
         except Error as err:
             print("Error inserting data")
             print(err)
-            quit()
+            if err not in ("Duplicate entry", "Duplicate entry for key 'PRIMARY'"):
+                return False
+        return True
 
 
     def clear_table(self, name: str):

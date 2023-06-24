@@ -27,7 +27,8 @@ def additional_commands_input():
     print("4. Validate ndjson")
     print("5. Download and Upload again")
     print("6. Remove duplicates from ndjson")
-    print("7. Exit")
+    print("7. Add all ndjson data to database")
+    print("99. Exit")
     print("\n\n")
     try:
         return int(input())
@@ -91,6 +92,8 @@ def main():
                 download_and_upload()
             case Options.REMOVE_DUPLICATES.value:
                 nd_json_reader.remove_duplicates()
+            case Options.ADD_TO_DATABASE.value:
+                write_ndjson_to_database(nd_json_reader)
             case _:
                 print("Invalid Input")
         cmd = additional_commands_input()
@@ -105,7 +108,8 @@ def write_ndjson_to_database(nd_json_reader: file_util.NDJsonReader):
     headers = "video_id, title, channel_name, channel_id, upload_date, description"
     for video_data in nd_json_reader.data_generator():
         print(video_data["description"])
-        server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"]))
+        if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
+            break
 
 if __name__ == "__main__":
     main()
