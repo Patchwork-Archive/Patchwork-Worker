@@ -74,8 +74,6 @@ def _make_commit_message():
 
 def main():
     nd_json_reader = file_util.NDJsonReader(CONFIG.get("path", "ndjson_path"))
-    write_ndjson_to_database(nd_json_reader)
-    quit()
     download_and_upload()
     cmd = additional_commands_input()
     
