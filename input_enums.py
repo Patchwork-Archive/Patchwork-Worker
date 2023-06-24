@@ -7,4 +7,5 @@ class Options(Enum):
     SEARCH_FOR_VIDEO = 3
     VALIDATE_NDJSON = 4
     DOWNLOAD_AND_UPLOAD = 5
-    EXIT = 6
+    REMOVE_DUPLICATES = 6
+    EXIT = 7

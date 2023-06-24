@@ -74,11 +74,48 @@ class NDJsonReader:
         """
         Validates a ndjson file
         """
+        count = 0
+        with open("repair.txt", "w", encoding="utf-8") as f2:
+            with open(self._file_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        test_json = json.loads(line)
+                        test_json["upload_date"]
+                    except json.JSONDecodeError:
+                        print("Invalid JSON")
+                        return
+                    except KeyError:
+                        test_json = json.loads(line)
+                        for key in test_json:
+                            if key not in ["video_id", "title", "channel_name", "upload_date", "description", "channel_id"]:
+                                print("Incorrect key: ", key)
+                                value = test_json[key]
+                                new_dict = {k: v for k, v in test_json.items() if k != key}
+                                new_dict["upload_date"] = value
+                                f2.write(json.dumps(new_dict, ensure_ascii=False) + "\n")
+                                break
+                        count += 1
+        print("Incorrect JSON: ", count)
+    
+    def remove_duplicates(self):
+        """
+        Removes duplicates from a ndjson file
+        """
+        with open(self._file_path, "r", encoding="utf-8") as f:
+            data = [json.loads(line) for line in f]
+        # sort the list by the video id
+        sorted_data = sorted(data, key=lambda x: x["video_id"])
+        # remove duplicates
+        unique_data = []
+        for i in range(len(sorted_data) - 1):
+            if sorted_data[i]["video_id"] != sorted_data[i + 1]["video_id"]:
+                unique_data.append(sorted_data[i])
+        unique_data.append(sorted_data[-1])
+        with open(self._file_path, "w", encoding="utf-8") as f:
+            for item in unique_data:
+                f.write(json.dumps(item, ensure_ascii=False) + "\n")
+    
+    def data_generator(self):
         with open(self._file_path, "r", encoding="utf-8") as f:
             for line in f:
-                try:
-                    json.loads(line)
-                except json.JSONDecodeError:
-                    print("Invalid JSON")
-                    return
-        print("Valid JSON")
+                yield json.loads(line)
