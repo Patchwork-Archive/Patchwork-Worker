@@ -96,26 +96,27 @@ def main():
             case Options.REMOVE_DUPLICATES.value:
                 nd_json_reader.remove_duplicates()
             case Options.ADD_TO_DATABASE.value:
-                write_ndjson_to_database(nd_json_reader)
+                update_database()
             case _:
                 print("Invalid Input")
         cmd = additional_commands_input()
 
-def write_ndjson_to_database(nd_json_reader: file_util.NDJsonReader):
 
+def update_database():
     hostname = CONFIG.get("database", "host")
     user = CONFIG.get("database", "user")
     password = CONFIG.get("database", "password")
     database = CONFIG.get("database", "database")
-    server = SQLHandler(host_name=hostname, user_name=user, user_password=password, database_name=database)
-    server.create_table("songs", "video_id VARCHAR(255) PRIMARY KEY, title TEXT, channel_name VARCHAR(255), channel_id VARCHAR(255), upload_date VARCHAR(255), description TEXT")
+    ssh_host = CONFIG.get("database", "ssh_host")
+    ssh_username = CONFIG.get("database", "ssh_username")
+    ssh_password = CONFIG.get("database", "ssh_password")
+    remote_bind = CONFIG.get("database", "remote_bind")
+    server = SQLHandler(hostname, user, password, database, ssh_host, ssh_username, ssh_password, remote_bind )
+    # server.create_table("songs", "video_id VARCHAR(255) PRIMARY KEY, title TEXT, channel_name VARCHAR(255), channel_id VARCHAR(255), upload_date VARCHAR(255), description TEXT")
     headers = "video_id, title, channel_name, channel_id, upload_date, description"
-    for video_data in tqdm(nd_json_reader.data_generator()):
-        title =  video_data["title"]
-        description = video_data["description"]
-        if server.insert_row("songs", headers, (video_data["video_id"], title, video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], description)) is False:
+    for video_data in tqdm(data_converter.generate_database_row_data("output_video", "webm")):
+        if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
             break
-
-
+    server.close()
 if __name__ == "__main__":
     main()

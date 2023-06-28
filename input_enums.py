@@ -10,3 +10,4 @@ class Options(Enum):
     REMOVE_DUPLICATES = 6
     EXIT = 99
     ADD_TO_DATABASE = 7
+    UPDATE_DATABASE = 8

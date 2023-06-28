@@ -80,3 +80,9 @@ def generate_json_data(video_input_dir: str, file_type: str, ndjson_path: str):
     for file in tqdm(files, desc="Processing files", unit="file"):
         output_file.write(download_video_data(file))
     output_file.close()
+
+def generate_database_row_data(video_input_dir: str, file_type:str):
+    files = get_all_files_in_directory(video_input_dir, file_type)
+    for file in tqdm(files, desc="Processing files", unit="file"):
+        video_metadata = json.loads(download_video_data(file))
+        yield video_metadata

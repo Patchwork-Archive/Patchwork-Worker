@@ -1,16 +1,24 @@
 import mysql.connector
 from mysql.connector import Error, errorcode
+import sshtunnel
 
+sshtunnel.SSH_TIMEOUT = 5.0
+sshtunnel.TUNNEL_TIMEOUT = 5.0
 
 class SQLHandler:
-    def __init__(self, host_name: str, user_name: str, user_password: str, database_name: str):
+    def __init__(self, host_name: str, user_name: str, user_password: str, database_name: str = None, ssh_host: str = None, ssh_username: str = None, ssh_password: str = None, ssh_remote_bind: str = None):
         self.host_name = host_name
         self.username = user_name
         self.password = user_password
         self.database_name = database_name
-        self.connection = self._create_server_connection(
-            host_name, user_name, user_password)
-        self._load_database(database_name)
+        if ssh_host is None or ssh_username is None or ssh_password is None:
+            self.connection = self._create_server_connection(
+                host_name, user_name, user_password)
+        else:
+            self.connection = self._create_ssh_server_connection(
+                ssh_host, ssh_username, ssh_password, ssh_remote_bind, host_name, user_name, user_password)
+        if database_name is not None:
+            self._load_database(database_name)
 
     def _create_server_connection(self, host_name: str, user_name: str, user_password: str) -> mysql.connector:
         connection = None
@@ -19,6 +27,32 @@ class SQLHandler:
             print("MySQL Database connection successful")
         except Error as err:
             print(f"Error: '{err}'")
+        return connection
+    
+    def _create_ssh_server_connection(self, ssh_host:str, ssh_username: str, ssh_password: str, remote_bind:str, host_name: str, user_name: str, user_password: str) -> mysql.connector:
+        connection = None
+        try:
+            self._tunnel = sshtunnel.SSHTunnelForwarder(
+                (ssh_host),
+                ssh_username=ssh_username,
+                ssh_password=ssh_password,
+                remote_bind_address=(remote_bind, 3306),
+            )
+            self._tunnel.start()
+            print("SSH connection successful")
+            connection = mysql.connector.connect(
+                host=host_name,
+                user=user_name,
+                passwd=user_password,
+                port=self._tunnel.local_bind_port,
+                database=self.database_name,
+            )
+            print("MySQL Database connection successful")
+        except Error as err:
+            print(f"Error: '{err}'")
+        if connection is None:
+            print("Connection failed")
+            exit(1)
         return connection
 
     def get_connection(self):
@@ -33,7 +67,11 @@ class SQLHandler:
             exit(1)
 
     def _load_database(self, database_name: str):
-        cursor = self.connection.cursor()
+        try:
+            cursor = self.connection.cursor()
+        except Error as err:
+            print(f"Failed to load database: {err}")
+            exit(1)
         try:
             cursor.execute(f"USE {database_name}")
             print(f"Database {database_name} loaded successfully")
@@ -69,6 +107,12 @@ class SQLHandler:
             if err not in ("Duplicate entry", "Duplicate entry for key 'PRIMARY'"):
                 return False
         return True
+
+    def close_connection(self):
+        if self.connection.is_connected():
+            self._tunnel.stop()
+            self.connection.close()
+            print("MySQL connection is closed")
 
 
     def clear_table(self, name: str):
@@ -162,4 +206,7 @@ class SQLHandler:
         except Error as err:
             print("Error executing query")
             print(err)
-    
+
+
+if __name__ == "__main__":
+    server = SQLHandler()
