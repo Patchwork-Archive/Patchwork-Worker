@@ -23,13 +23,9 @@ def rclone_to_cloud():
 def additional_commands_input():
     print("\n\n")
     print("Finished Task... What would you like to do next?")
-    print("1. Sort Videos ndjson")
-    print("2. Commit to remote")
-    print("3. Search for video in ndjson (must be sorted)")
-    print("4. Validate ndjson")
     print("5. Download and Upload again")
     print("6. Remove duplicates from ndjson")
-    print("7. Add all ndjson data to database")
+    print("7. Add data to DB")
     print("99. Exit")
     print("\n\n")
     try:
@@ -53,14 +49,10 @@ def download_and_upload():
         data_converter.convert_all_mkv_to_webm(
             CONFIG.get("path", "download_output_path")
         )
-    print("Download Complete... Ready to generate ndjson data (y/n)")
-    data_converter.generate_json_data(
-        video_input_dir=CONFIG.get("path", "download_output_path"),
-        file_type=".webm",
-        ndjson_path=CONFIG.get("path", "ndjson_path"),
-    ) if input() == "y" else print("Skipping...")
-    print("JSON Data Generated... Upload to Cloud? (y/n)")
+    print("Upload to Cloud? (y/n)")
     rclone_to_cloud() if input() == "y" else print("Skipping...")
+    print("Ready to add to DB? (y/n)")
+    update_database() if input() == "y" else print("Skipping...")
 
 
 def _make_commit_message():
