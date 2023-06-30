@@ -5,15 +5,16 @@ import file_util
 from input_enums import Options
 from datetime import datetime
 from sql.sql_handler import SQLHandler
-from unidecode import unidecode
 from tqdm import tqdm
+import discord_webhook
 
-CONFIG = file_util.read_config(
-    "config.ini",
-)
+CONFIG = file_util.read_config("config.ini")
 
 
 def rclone_to_cloud():
+    """
+    Uploads all files in the download_output_path to the cloud
+    """
     subprocess.run(
         f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","download_output_path")}" "{CONFIG.get("path","rclone_cloud_target")}"',
         shell=True,
@@ -36,6 +37,10 @@ def additional_commands_input():
 
 
 def download_and_upload():
+    """
+    Downloads videos from the download_list.txt file and uploads them to the cloud
+    (optional) sends a message to discord webhook
+    """
     print("Clear output folder? (y/n)")
     file_util.clear_output_folder(
         CONFIG.get("path", "download_output_path")
@@ -53,15 +58,9 @@ def download_and_upload():
     rclone_to_cloud() if input() == "y" else print("Skipping...")
     print("Ready to add to DB? (y/n)")
     update_database() if input() == "y" else print("Skipping...")
-
-
-def _make_commit_message():
-    commit_message = f"Generation at {datetime.now()}\n\n"
-    for video in data_converter.get_all_files_in_directory(
-        CONFIG.get("path", "download_output_path"), file_type="webm"
-    ):
-        commit_message += f"{video}\n"
-    return commit_message
+    discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), ["https://www.youtube.com/watch?v="+video_id.replace(".webm", "") for video_id in list(data_converter.get_all_files_in_directory("output_video", "webm"))])
+    file_util.clear_output_folder(
+        CONFIG.get("path", "download_output_path"))
 
 
 def main():
@@ -71,18 +70,6 @@ def main():
     
     while cmd != Options.EXIT.value:
         match cmd:
-            case Options.SORT_VIDEOS.value:
-                nd_json_reader.sort_ndjson("video_id")
-            case Options.COMMIT_TO_REMOTE.value:
-                data_converter.commit_and_push(
-                    CONFIG.get("path", "git_repo_path"), _make_commit_message()
-                )
-            case Options.SEARCH_FOR_VIDEO.value:
-                print("Enter video id to search for: ")
-                video_id = input()
-                nd_json_reader.search_for_video_id(video_id)
-            case Options.VALIDATE_NDJSON.value:
-                nd_json_reader.validate_ndjson()
             case Options.DOWNLOAD_AND_UPLOAD.value:
                 download_and_upload()
             case Options.REMOVE_DUPLICATES.value:
@@ -103,12 +90,18 @@ def update_database():
     ssh_username = CONFIG.get("database", "ssh_username")
     ssh_password = CONFIG.get("database", "ssh_password")
     remote_bind = CONFIG.get("database", "remote_bind")
-    server = SQLHandler(hostname, user, password, database, ssh_host, ssh_username, ssh_password, remote_bind )
+    if ssh_host == "" or ssh_username == "" or ssh_password == "":
+        print("No or Invalid SSH credentials provided. Skipping...")
+        ssh_host = None
+        ssh_username = None
+        ssh_password = None
+    server = SQLHandler(hostname, user, password, database, ssh_host, ssh_username, ssh_password, remote_bind)
     # server.create_table("songs", "video_id VARCHAR(255) PRIMARY KEY, title TEXT, channel_name VARCHAR(255), channel_id VARCHAR(255), upload_date VARCHAR(255), description TEXT")
     headers = "video_id, title, channel_name, channel_id, upload_date, description"
     for video_data in tqdm(data_converter.generate_database_row_data("output_video", "webm")):
         if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
             break
-    server.close()
+    server.close_connection()
+
 if __name__ == "__main__":
     main()
