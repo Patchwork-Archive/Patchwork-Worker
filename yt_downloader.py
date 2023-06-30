@@ -2,6 +2,7 @@ import subprocess
 import os
 from tqdm import tqdm
 import requests
+from archive_api import ArchiveAPI
 
 MAXIMUM_FILE_SIZE_BYTES = 500000000  # 500 MB. Extra check here to make sure we don't download a file that is too big
 
@@ -43,6 +44,7 @@ class YouTubeDownloader:
             os.makedirs(self._output_dir)
 
     def download_urls(self):
+        archive_api = ArchiveAPI()
         url = "https://www.youtube.com/watch?v="
         self._make_files_and_directories()
 
@@ -88,7 +90,13 @@ class YouTubeDownloader:
                 for row in tqdm(f, total=num_rows):
                     if "playlist?list=" in row:
                         for url in self.get_yt_playlist_urls(row.strip()):
+                            if archive_api.video_is_archived(_extract_video_id_from_url(url)):
+                                print(url, "is already archived. Skipping.")
+                                continue
                             _download_youtube_url(_extract_video_id_from_url(url))
+                    if archive_api.video_is_archived(_extract_video_id_from_url(row.strip())):
+                        print(url, "is already archived. Skipping.")
+                        continue
                     _download_youtube_url(_extract_video_id_from_url(row.strip()))
 
         _download_urls_txt()
