@@ -3,11 +3,9 @@ from yt_downloader import YouTubeDownloader
 import subprocess
 import file_util
 from input_enums import Options
-from datetime import datetime
 from sql.sql_handler import SQLHandler
 from tqdm import tqdm
 import discord_webhook
-import sys
 
 CONFIG = file_util.read_config("config.ini")
 
@@ -20,6 +18,7 @@ def rclone_to_cloud():
         f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","download_output_path")}" "{CONFIG.get("path","rclone_cloud_target")}"',
         shell=True,
     )
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","thumbnail_output_path")}" "{CONFIG.get("path","rclone_thumbnail_target")}"', shell=True)
 
 
 def additional_commands_input():
@@ -47,6 +46,7 @@ def download_and_upload(confirmations=False):
         file_util.clear_output_folder(
             CONFIG.get("path", "download_output_path")
         ) if input() == "y" else print("Skipping...")
+        file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
         print("Download Videos? (y/n)")
         downloader = YouTubeDownloader(
             "download_list.txt", CONFIG.get("path", "download_output_path")
@@ -64,6 +64,7 @@ def download_and_upload(confirmations=False):
         file_util.clear_output_folder(
             CONFIG.get("path", "download_output_path")
         )
+        file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
         downloader = YouTubeDownloader(
             "download_list.txt", CONFIG.get("path", "download_output_path")
         )
@@ -76,6 +77,7 @@ def download_and_upload(confirmations=False):
     discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), ["https://www.youtube.com/watch?v="+video_id.replace(".webm", "") for video_id in list(data_converter.get_all_files_in_directory("output_video", "webm"))])
     file_util.clear_output_folder(
         CONFIG.get("path", "download_output_path"))
+    file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
 
 
 def main():

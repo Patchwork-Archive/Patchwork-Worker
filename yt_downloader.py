@@ -3,6 +3,7 @@ import os
 from tqdm import tqdm
 import requests
 from archive_api import ArchiveAPI
+import thumbnail_downloader
 
 MAXIMUM_FILE_SIZE_BYTES = 500000000  # 500 MB. Extra check here to make sure we don't download a file that is too big
 
@@ -94,9 +95,11 @@ class YouTubeDownloader:
                                 print(url, "is already archived. Skipping.")
                                 continue
                             _download_youtube_url(_extract_video_id_from_url(url))
+                            thumbnail_downloader.download_thumbnail(_extract_video_id_from_url(url))
                     if archive_api.video_is_archived(_extract_video_id_from_url(row.strip())):
                         print(url, "is already archived. Skipping.")
                         continue
                     _download_youtube_url(_extract_video_id_from_url(row.strip()))
+                    thumbnail_downloader.download_thumbnail(_extract_video_id_from_url(row.strip()))
 
         _download_urls_txt()

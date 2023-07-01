@@ -22,12 +22,13 @@ def download_thumbnail(video_id: str):
     try:
         url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
         urllib.request.urlretrieve(url, f"thumbnails/{video_id}.jpg")
-        print("Successfully downloaded from YouTube")
+        print("Successfully downloaded thumbnail from YouTube")
         return True
     except Exception:
         print("Error downloading thumbnail from youtube", video_id)
     for drivebase in RAGTAG_DRIVEBASES:
-        url = f"https://the-eye.eu/archive.ragtag.moe/{drivebase}/archive/{video_id}/{video_id}.jpg"
+        url = f"https://the-eye.eu/archive.ragtag.moe/{drivebase}/archive2b/{video_id}/{video_id}.jpg"
+       # url = f"https://content.archive.ragtag.moe/gd:{drivebase}/{video_id}/{video_id}.jpg"
         try:
             urllib.request.urlretrieve(url, f"thumbnails/{video_id}.jpg")
             print("Successfully downloaded from Ragtag Drivebase", drivebase)
