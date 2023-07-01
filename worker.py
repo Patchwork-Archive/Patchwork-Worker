@@ -7,6 +7,7 @@ from datetime import datetime
 from sql.sql_handler import SQLHandler
 from tqdm import tqdm
 import discord_webhook
+import sys
 
 CONFIG = file_util.read_config("config.ini")
 
@@ -36,28 +37,42 @@ def additional_commands_input():
         return additional_commands_input()
 
 
-def download_and_upload():
+def download_and_upload(confirmations=False):
     """
     Downloads videos from the download_list.txt file and uploads them to the cloud
     (optional) sends a message to discord webhook
     """
-    print("Clear output folder? (y/n)")
-    file_util.clear_output_folder(
-        CONFIG.get("path", "download_output_path")
-    ) if input() == "y" else print("Skipping...")
-    print("Download Videos? (y/n)")
-    downloader = YouTubeDownloader(
-        "download_list.txt", CONFIG.get("path", "download_output_path")
-    )
-    if input() == "y":
+    if confirmations:
+        print("Clear output folder? (y/n)")
+        file_util.clear_output_folder(
+            CONFIG.get("path", "download_output_path")
+        ) if input() == "y" else print("Skipping...")
+        print("Download Videos? (y/n)")
+        downloader = YouTubeDownloader(
+            "download_list.txt", CONFIG.get("path", "download_output_path")
+        )
+        if input() == "y":
+            downloader.download_urls()
+            data_converter.convert_all_mkv_to_webm(
+                CONFIG.get("path", "download_output_path")
+            )
+        print("Upload to Cloud? (y/n)")
+        rclone_to_cloud() if input() == "y" else print("Skipping...")
+        print("Ready to add to DB? (y/n)")
+        update_database() if input() == "y" else print("Skipping...")
+    else:
+        file_util.clear_output_folder(
+            CONFIG.get("path", "download_output_path")
+        )
+        downloader = YouTubeDownloader(
+            "download_list.txt", CONFIG.get("path", "download_output_path")
+        )
         downloader.download_urls()
         data_converter.convert_all_mkv_to_webm(
             CONFIG.get("path", "download_output_path")
         )
-    print("Upload to Cloud? (y/n)")
-    rclone_to_cloud() if input() == "y" else print("Skipping...")
-    print("Ready to add to DB? (y/n)")
-    update_database() if input() == "y" else print("Skipping...")
+        rclone_to_cloud()
+        update_database()
     discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), ["https://www.youtube.com/watch?v="+video_id.replace(".webm", "") for video_id in list(data_converter.get_all_files_in_directory("output_video", "webm"))])
     file_util.clear_output_folder(
         CONFIG.get("path", "download_output_path"))
@@ -65,7 +80,7 @@ def download_and_upload():
 
 def main():
     nd_json_reader = file_util.NDJsonReader(CONFIG.get("path", "ndjson_path"))
-    download_and_upload()
+    download_and_upload(confirmations=False)
     cmd = additional_commands_input()
     
     while cmd != Options.EXIT.value:

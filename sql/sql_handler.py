@@ -2,8 +2,8 @@ import mysql.connector
 from mysql.connector import Error, errorcode
 import sshtunnel
 
-sshtunnel.SSH_TIMEOUT = 5.0
-sshtunnel.TUNNEL_TIMEOUT = 5.0
+sshtunnel.SSH_TIMEOUT = 20.0
+sshtunnel.TUNNEL_TIMEOUT = 20.0
 
 class SQLHandler:
     def __init__(self, host_name: str, user_name: str, user_password: str, database_name: str = None, ssh_host: str = None, ssh_username: str = None, ssh_password: str = None, ssh_remote_bind: str = None):
