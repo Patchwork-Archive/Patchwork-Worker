@@ -23,7 +23,8 @@ class SQLHandler:
     def _create_server_connection(self, host_name: str, user_name: str, user_password: str) -> mysql.connector:
         connection = None
         try:
-            connection = mysql.connector.connect(host=host_name, user=user_name, passwd=user_password, charset="utf8mb4")
+            connection = mysql.connector.connect(host=host_name, user=user_name, passwd=user_password, charset="utf8mb4", collation="utf8mb4_general_ci")
+            connection.set_charset_collation('utf8mb4', 'utf8mb4_general_ci')
             print("MySQL Database connection successful")
         except Error as err:
             print(f"Error: '{err}'")
@@ -174,18 +175,21 @@ class SQLHandler:
             print("Error checking row")
             print(err)
 
-    def update_row(self, name: str, column_name: str, search_val: str, replace_col:str, new_value: str):
+    def update_row(self, name: str, search_column: str, search_val: str, replace_col: str, replace_value: str):
         """
         Updates a row in a table
         """
         cursor = self.connection.cursor()
         try:
-            cursor.execute(f"UPDATE {name} SET {replace_col} = '{new_value}' WHERE {column_name} = '{search_val}'")
+            query = f"UPDATE {name} SET {replace_col} = %s WHERE {search_column} = %s"
+            replace_value = replace_value.encode('utf8')
+            cursor.execute(query, (replace_value, search_val))
             self.connection.commit()
             print("Row updated successfully")
         except Error as err:
             print("Error updating row")
             print(err)
+
     
     def execute_query(self, query: str):
         cursor = self.connection.cursor()
