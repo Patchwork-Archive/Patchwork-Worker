@@ -6,6 +6,7 @@ from input_enums import Options
 from sql.sql_handler import SQLHandler
 from tqdm import tqdm
 import discord_webhook
+import sys
 
 CONFIG = file_util.read_config("config.ini")
 
@@ -82,7 +83,8 @@ def download_and_upload(confirmations=False):
 
 def main():
     nd_json_reader = file_util.NDJsonReader(CONFIG.get("path", "ndjson_path"))
-    download_and_upload(confirmations=False)
+    if not "--no-download" in sys.argv:
+        download_and_upload(confirmations=False)
     cmd = additional_commands_input()
     
     while cmd != Options.EXIT.value:
