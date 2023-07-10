@@ -2,7 +2,7 @@ import urllib.request
 import json
 
 class ArchiveAPI:
-    def __init__(self, base_url: str = "https://archive.pinapelz.com/api/") -> None:
+    def __init__(self, base_url: str = "https://archive.pinapelz.moe/api/") -> None:
         if base_url[-1] != "/":
             base_url += "/"
         self.base_url = base_url
@@ -18,6 +18,7 @@ class ArchiveAPI:
         try:
             data = urllib.request.urlopen(req, timeout=10).read()
         except urllib.error.URLError as e:
+            print(e)
             print(f"Unable to connect to server to check. Assuming video is not archived")
             return False
         json_data = json.loads(data)
