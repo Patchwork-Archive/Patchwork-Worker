@@ -24,9 +24,10 @@ def main():
             print(next_video.text)
             worker.execute_server_worker(next_video.text)
         else:
-            print("No videos to archive at this time.")
-        print("Cooldown until next check")
-        time.sleep(300)
+            print("No videos to archive at this time. Cooling down...")
+            time.sleep(250)
+        
+        
 
 
 if __name__ == '__main__':
