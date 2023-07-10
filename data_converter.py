@@ -66,21 +66,6 @@ def download_video_data(url: str):
     }
     return json.dumps(json_obj, ensure_ascii=False) + "\n"
 
-
-def commit_and_push(repo_path: str, commit_message: str):
-    subprocess.run(["git", "-C", repo_path, "checkout", "main"])
-    subprocess.run(["git", "-C", repo_path, "add", "."])
-    subprocess.run(["git", "-C", repo_path, "commit", "-m", commit_message])
-    subprocess.run(["git", "-C", repo_path, "push"])
-
-
-def generate_json_data(video_input_dir: str, file_type: str, ndjson_path: str):
-    output_file = open(ndjson_path, "a", encoding="utf-8")
-    files = get_all_files_in_directory(video_input_dir, file_type)
-    for file in tqdm(files, desc="Processing files", unit="file"):
-        output_file.write(download_video_data(file))
-    output_file.close()
-
 def generate_database_row_data(video_input_dir: str, file_type:str):
     files = get_all_files_in_directory(video_input_dir, file_type)
     for file in tqdm(files, desc="Processing files", unit="file"):

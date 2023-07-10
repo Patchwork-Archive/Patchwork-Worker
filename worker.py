@@ -2,7 +2,6 @@ import data_converter
 from yt_downloader import YouTubeDownloader
 import subprocess
 import file_util
-from input_enums import Options
 from sql.sql_handler import SQLHandler
 from tqdm import tqdm
 import discord_webhook
@@ -20,21 +19,6 @@ def rclone_to_cloud():
         shell=True,
     )
     subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","thumbnail_output_path")}" "{CONFIG.get("path","rclone_thumbnail_target")}"', shell=True)
-
-
-def additional_commands_input():
-    print("\n\n")
-    print("Finished Task... What would you like to do next?")
-    print("5. Download and Upload again")
-    print("6. Remove duplicates from ndjson")
-    print("7. Add data to DB")
-    print("99. Exit")
-    print("\n\n")
-    try:
-        return int(input())
-    except ValueError:
-        print("Invalid Input")
-        return additional_commands_input()
 
 
 def download_and_upload(confirmations=False):
@@ -82,22 +66,8 @@ def download_and_upload(confirmations=False):
 
 
 def main():
-    nd_json_reader = file_util.NDJsonReader(CONFIG.get("path", "ndjson_path"))
     if not "--no-download" in sys.argv:
         download_and_upload(confirmations=False)
-    cmd = additional_commands_input()
-    
-    while cmd != Options.EXIT.value:
-        match cmd:
-            case Options.DOWNLOAD_AND_UPLOAD.value:
-                download_and_upload()
-            case Options.REMOVE_DUPLICATES.value:
-                nd_json_reader.remove_duplicates()
-            case Options.ADD_TO_DATABASE.value:
-                update_database()
-            case _:
-                print("Invalid Input")
-        cmd = additional_commands_input()
 
 
 def update_database():

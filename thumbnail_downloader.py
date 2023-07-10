@@ -11,6 +11,7 @@ RAGTAG_DRIVEBASES = [
     "0APcbUqyfMhbLUk9PVA",
     "0ANsY3BPG5rJwUk9PVA",
 ]
+
 def download_thumbnail(video_id: str):
     """
     1. Try to download from youtube
@@ -26,9 +27,15 @@ def download_thumbnail(video_id: str):
         return True
     except Exception:
         print("Error downloading thumbnail from youtube", video_id)
+    try:
+        url = f"https://img.youtube.com/vi/{video_id}/mqdefault.jpg"
+        urllib.request.urlretrieve(url, f"thumbnails/{video_id}.jpg")
+        print("Successfully downloaded thumbnail from YouTube")
+        return True
+    except Exception:
+        print("Error downloading thumbnail from youtube", video_id)
     for drivebase in RAGTAG_DRIVEBASES:
-        url = f"https://the-eye.eu/archive.ragtag.moe/{drivebase}/archive2b/{video_id}/{video_id}.jpg"
-       # url = f"https://content.archive.ragtag.moe/gd:{drivebase}/{video_id}/{video_id}.jpg"
+        url = f"https://content.archive.ragtag.moe/gd:{drivebase}/{video_id}/{video_id}.jpg"
         try:
             urllib.request.urlretrieve(url, f"thumbnails/{video_id}.jpg")
             print("Successfully downloaded from Ragtag Drivebase", drivebase)
