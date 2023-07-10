@@ -114,6 +114,19 @@ class SQLHandler:
             self._tunnel.stop()
             self.connection.close()
             print("MySQL connection is closed")
+    
+    def delete_row(self, name: str, column: str, data: tuple):
+        cursor = self.connection.cursor()
+        try:
+            query = f"DELETE FROM {name} WHERE {column} = %s"
+            cursor.execute(query, data)
+            self.connection.commit()
+            print("Data Deleted:", data)
+        except Error as err:
+            print("Error deleting data")
+            print(err)
+            return False
+        return True
 
 
     def clear_table(self, name: str):

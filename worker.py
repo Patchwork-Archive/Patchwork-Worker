@@ -5,7 +5,7 @@ import file_util
 from sql.sql_handler import SQLHandler
 from tqdm import tqdm
 import discord_webhook
-import sys
+import argparse
 
 CONFIG = file_util.read_config("config.ini")
 
@@ -66,8 +66,23 @@ def download_and_upload(confirmations=False):
 
 
 def main():
-    if not "--no-download" in sys.argv:
+    parser = argparse.ArgumentParser(description='Archiving Worker Script')
+    parser.add_argument('--archive', type=str, help='URL to archive')
+    parser.add_argument('--no-download', action='store_true', help='Optional flag')
+    args = parser.parse_args()
+    if args.archive is not None:
+        with open("download_list.txt", "w") as f:
+            f.write(args.archive + "\n")
+    if not args.no_download:
         download_and_upload(confirmations=False)
+
+def execute_server_worker(url: str):
+    """
+    To be executed through server.py when deploying an automatic archival
+    """
+    with open("download_list.txt", "w") as f:
+        f.write(url + "\n")
+    download_and_upload(confirmations=False)
 
 
 def update_database():
