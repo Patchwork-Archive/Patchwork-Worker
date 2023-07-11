@@ -19,7 +19,7 @@ def main():
     base_url = config.get("queue", "base_url")
     password = config.get("queue", "worker_password")
     while True:
-        headers = {'X-AUTHENTICATION': password+"wfe"}
+        headers = {'X-AUTHENTICATION': password}
         next_video = requests.get(f"{base_url}/api/worker/next", headers=headers)
         if next_video.status_code == 200:
             print(next_video.text)
