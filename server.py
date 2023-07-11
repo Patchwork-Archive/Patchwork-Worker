@@ -2,6 +2,7 @@ import worker
 import requests
 import time
 import configparser
+import datetime
 
 def read_config(file_path: str):
     """
@@ -13,22 +14,36 @@ def read_config(file_path: str):
     config.read(file_path)
     return config
 
+def send_heartbeat(status: str):
+    """
+    Sends a heartbeat to the server
+    :param: status: str
+    """
+    config = read_config("config.ini")
+    base_url = config.get("queue", "base_url")
+    password = config.get("queue", "worker_password")
+    name = config.get("queue", "worker_name")
+    headers = {'X-AUTHENTICATION': password}
+    requests.post(f"{base_url}/api/worker/heartbeat", headers=headers, data={"status": status, "name": name})
 
 def main():
     config = read_config("config.ini")
     base_url = config.get("queue", "base_url")
     password = config.get("queue", "worker_password")
+    send_heartbeat("Online")
     while True:
         headers = {'X-AUTHENTICATION': password}
         next_video = requests.get(f"{base_url}/api/worker/next", headers=headers)
         if next_video.status_code == 200:
-            print(next_video.text)
+            print("Found video to archive. Starting...")
+            send_heartbeat("Archiving " + next_video.text)
             worker.execute_server_worker(next_video.text)
         elif next_video.status_code == 401:
             print("Invalid credentials. The password may be incorrect")
             time.sleep(500)
         else:
             print("No videos to archive at this time. Cooling down...")
+            send_heartbeat("Idle. Waiting for work...")
             time.sleep(250)
         
         
