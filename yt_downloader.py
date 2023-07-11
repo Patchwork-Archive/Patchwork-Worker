@@ -97,7 +97,7 @@ class YouTubeDownloader:
                             _download_youtube_url(_extract_video_id_from_url(url))
                             thumbnail_downloader.download_thumbnail(_extract_video_id_from_url(url))
                     if archive_api.video_is_archived(_extract_video_id_from_url(row.strip())):
-                        print(url, "is already archived. Skipping.")
+                        print(row.strip(), "is already archived. Skipping.")
                         continue
                     _download_youtube_url(_extract_video_id_from_url(row.strip()))
                     thumbnail_downloader.download_thumbnail(_extract_video_id_from_url(row.strip()))
