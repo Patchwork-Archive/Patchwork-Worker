@@ -19,10 +19,14 @@ def main():
     base_url = config.get("queue", "base_url")
     password = config.get("queue", "worker_password")
     while True:
-        next_video = requests.get(f"{base_url}/api/worker/next?password={password}")
+        headers = {'X-AUTHENTICATION': password+"wfe"}
+        next_video = requests.get(f"{base_url}/api/worker/next", headers=headers)
         if next_video.status_code == 200:
             print(next_video.text)
             worker.execute_server_worker(next_video.text)
+        elif next_video.status_code == 401:
+            print("Invalid credentials. The password may be incorrect")
+            time.sleep(500)
         else:
             print("No videos to archive at this time. Cooling down...")
             time.sleep(250)
