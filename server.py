@@ -2,7 +2,6 @@ import worker
 import requests
 import time
 import configparser
-import datetime
 
 def read_config(file_path: str):
     """
@@ -31,21 +30,29 @@ def main():
     base_url = config.get("queue", "base_url")
     password = config.get("queue", "worker_password")
     send_heartbeat("Online")
-    while True:
-        headers = {'X-AUTHENTICATION': password}
-        next_video = requests.get(f"{base_url}/api/worker/next", headers=headers)
-        if next_video.status_code == 200:
-            print("Found video to archive. Starting...")
-            send_heartbeat("Archiving " + next_video.text)
-            worker.execute_server_worker(next_video.text)
-        elif next_video.status_code == 401:
-            print("Invalid credentials. The password may be incorrect")
-            time.sleep(500)
+    try:
+        while True:
+            headers = {'X-AUTHENTICATION': password}
+            next_video = requests.get(f"{base_url}/api/worker/next", headers=headers)
+            if next_video.status_code == 200:
+                print("Found video to archive. Starting...")
+                send_heartbeat("Archiving " + next_video.text)
+                worker.execute_server_worker(next_video.text)
+            elif next_video.status_code == 401:
+                print("Invalid credentials. The password may be incorrect")
+                time.sleep(500)
+            else:
+                print("No videos to archive at this time. Cooling down...")
+                send_heartbeat("Idle. Waiting for work...")
+                time.sleep(250)
+    except Exception as e:
+        if str(e) == "KeyboardInterrupt":
+            print("Keyboard interrupt detected. Sending offline heartbeat...")
+            send_heartbeat("Offline")
         else:
-            print("No videos to archive at this time. Cooling down...")
-            send_heartbeat("Idle. Waiting for work...")
-            time.sleep(250)
-        
+            print("An error occurred. Sending offline heartbeat...")
+            send_heartbeat("Offline - An error occured " + str(e))
+            
         
 
 
