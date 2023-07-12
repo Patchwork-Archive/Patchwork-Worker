@@ -83,4 +83,3 @@ class YouTubeDownloader(VideoDownloader):
             thumbnail_downloader.download_thumbnail_yt(_extract_video_id_from_url(video_url.strip()))
 
         _download_url()
-        quit()
