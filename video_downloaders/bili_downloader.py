@@ -13,8 +13,10 @@ class BiliBiliDownloader(VideoDownloader):
         output_dir: str,
         log_skip_file: str = "logs/skipped.txt",
         log_deleted_file: str = "logs/deleted.txt",
+        cookies: str = None,
         ):
             super().__init__(output_dir, log_skip_file, log_deleted_file)
+            self._cookies = cookies
         
         def download_urls(self, video_url: str):
             archive_api = ArchiveAPI()
@@ -36,10 +38,17 @@ class BiliBiliDownloader(VideoDownloader):
                     print(full_url, "is already archived. Skipping.")
                     return
                 print("Downloading", full_url)
-                subprocess.run(
-                    f'yt-dlp {full_url} -f "bestvideo[ext=mp4]+bestaudio" -o "{self._output_dir}/%(id)s.%(ext)s" --add-metadata',
-                shell=True,
-                )
+
+                if self._cookies:
+                    subprocess.run(
+                        f'yt-dlp {full_url} -f "bestvideo[ext=mp4]+bestaudio" -o "{self._output_dir}/%(id)s.%(ext)s" --add-metadata --cookies {self._cookies}',
+                    shell=True,
+                    )
+                else:
+                    subprocess.run(
+                        f'yt-dlp {full_url} -f "bestvideo[ext=mp4]+bestaudio" -o "{self._output_dir}/%(id)s.%(ext)s" --add-metadata',
+                    shell=True,
+                    )
                 try:
                     if os.path.getsize(output_path) > MAXIMUM_FILE_SIZE_BYTES:
                         with open(self._LOG_SKIP_FILE, "a") as f:

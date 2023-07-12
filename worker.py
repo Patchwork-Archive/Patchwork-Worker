@@ -32,7 +32,7 @@ def download_and_upload():
     )
     file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
     yt_downloader = YouTubeDownloader(CONFIG.get("path", "download_output_path"))
-    bili_downloader = BiliBiliDownloader(CONFIG.get("path", "download_output_path"))
+    bili_downloader = BiliBiliDownloader(CONFIG.get("path", "download_output_path"), CONFIG.get("queue", "bilibili_cookies"))
 
 
     for url in tqdm(file_util.read_file("download_list.txt")):
