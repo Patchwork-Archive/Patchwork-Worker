@@ -43,6 +43,9 @@ def download_and_upload():
     data_converter.convert_all_mkv_to_webm(
         CONFIG.get("path", "download_output_path")
     )
+    data_converter.convert_all_mp4_to_webm(
+        CONFIG.get("path", "download_output_path")
+    )
     rclone_to_cloud()
     update_database()
     discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), ["https://www.youtube.com/watch?v="+video_id.replace(".webm", "") for video_id in list(data_converter.get_all_files_in_directory("output_video", "webm"))])
@@ -88,7 +91,7 @@ def update_database():
     server = SQLHandler(hostname, user, password, database, ssh_host, ssh_username, ssh_password, remote_bind)
     # server.create_table("songs", "video_id VARCHAR(255) PRIMARY KEY, title TEXT, channel_name VARCHAR(255), channel_id VARCHAR(255), upload_date VARCHAR(255), description TEXT")
     headers = "video_id, title, channel_name, channel_id, upload_date, description"
-    for video_data in tqdm(data_converter.generate_database_row_data("output_video", "webm")):
+    for video_data in tqdm(data_converter.generate_database_row_data("download_list.txt")):
         if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
             break
     server.close_connection()
