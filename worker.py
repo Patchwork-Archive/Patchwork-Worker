@@ -1,5 +1,6 @@
 import data_converter
-from yt_downloader import YouTubeDownloader
+from video_downloaders.yt_downloader import YouTubeDownloader
+from video_downloaders.bili_downloader import BiliBiliDownloader
 import subprocess
 import file_util
 from sql.sql_handler import SQLHandler
@@ -21,44 +22,29 @@ def rclone_to_cloud():
     subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","thumbnail_output_path")}" "{CONFIG.get("path","rclone_thumbnail_target")}"', shell=True)
 
 
-def download_and_upload(confirmations=False):
+def download_and_upload():
     """
     Downloads videos from the download_list.txt file and uploads them to the cloud
     (optional) sends a message to discord webhook
     """
-    if confirmations:
-        print("Clear output folder? (y/n)")
-        file_util.clear_output_folder(
-            CONFIG.get("path", "download_output_path")
-        ) if input() == "y" else print("Skipping...")
-        file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
-        print("Download Videos? (y/n)")
-        downloader = YouTubeDownloader(
-            "download_list.txt", CONFIG.get("path", "download_output_path")
-        )
-        if input() == "y":
-            downloader.download_urls()
-            data_converter.convert_all_mkv_to_webm(
-                CONFIG.get("path", "download_output_path")
-            )
-        print("Upload to Cloud? (y/n)")
-        rclone_to_cloud() if input() == "y" else print("Skipping...")
-        print("Ready to add to DB? (y/n)")
-        update_database() if input() == "y" else print("Skipping...")
-    else:
-        file_util.clear_output_folder(
-            CONFIG.get("path", "download_output_path")
-        )
-        file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
-        downloader = YouTubeDownloader(
-            "download_list.txt", CONFIG.get("path", "download_output_path")
-        )
-        downloader.download_urls()
-        data_converter.convert_all_mkv_to_webm(
-            CONFIG.get("path", "download_output_path")
-        )
-        rclone_to_cloud()
-        update_database()
+    file_util.clear_output_folder(
+        CONFIG.get("path", "download_output_path")
+    )
+    file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
+    yt_downloader = YouTubeDownloader(CONFIG.get("path", "download_output_path"))
+    bili_downloader = BiliBiliDownloader(CONFIG.get("path", "download_output_path"))
+
+
+    for url in tqdm(file_util.read_file("download_list.txt")):
+        if "youtube" in url:
+            yt_downloader.download_urls(url)
+        elif "bilibili" in url:
+            bili_downloader.download_urls(url)
+    data_converter.convert_all_mkv_to_webm(
+        CONFIG.get("path", "download_output_path")
+    )
+    rclone_to_cloud()
+    update_database()
     discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), ["https://www.youtube.com/watch?v="+video_id.replace(".webm", "") for video_id in list(data_converter.get_all_files_in_directory("output_video", "webm"))])
     file_util.clear_output_folder(
         CONFIG.get("path", "download_output_path"))
@@ -74,7 +60,7 @@ def main():
         with open("download_list.txt", "w") as f:
             f.write(args.archive + "\n")
     if not args.no_download:
-        download_and_upload(confirmations=False)
+        download_and_upload()
 
 def execute_server_worker(url: str):
     """
@@ -82,7 +68,7 @@ def execute_server_worker(url: str):
     """
     with open("download_list.txt", "w") as f:
         f.write(url + "\n")
-    download_and_upload(confirmations=False)
+    download_and_upload()
 
 
 def update_database():

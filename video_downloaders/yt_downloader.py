@@ -1,25 +1,22 @@
 import subprocess
-import os
 from tqdm import tqdm
 import requests
 from archive_api import ArchiveAPI
 import thumbnail_downloader
+from video_downloaders.video_downloader import VideoDownloader
+import os
 
 MAXIMUM_FILE_SIZE_BYTES = 500000000  # 500 MB. Extra check here to make sure we don't download a file that is too big
 
 
-class YouTubeDownloader:
+class YouTubeDownloader(VideoDownloader):
     def __init__(
         self,
-        download_list_file: str,
-        output_dir,
+        output_dir: str,
         log_skip_file: str = "logs/skipped.txt",
         log_deleted_file: str = "logs/deleted.txt",
     ):
-        self._LOG_SKIP_FILE = log_skip_file
-        self._LOG_DELETED_FILE = log_deleted_file
-        self._download_list_file = download_list_file
-        self._output_dir = output_dir
+        super().__init__(output_dir, log_skip_file, log_deleted_file)
 
     @staticmethod
     def get_yt_playlist_urls(playlist_url: str):
@@ -31,20 +28,7 @@ class YouTubeDownloader:
         print("Read playlist as: \n" + response.text)
         return response.text.split("\n")
 
-    def _make_files_and_directories(self):
-        """
-        Makes the necessary files and directories for the downloader to work.
-        """
-        if not os.path.exists(self._LOG_SKIP_FILE):
-            os.makedirs(os.path.dirname(self._LOG_SKIP_FILE))
-            with open(self._LOG_SKIP_FILE, "w") as f:
-                f.write("")
-        with open(self._LOG_DELETED_FILE, "w") as f:
-            f.write("")
-        if not os.path.exists(self._output_dir):
-            os.makedirs(self._output_dir)
-
-    def download_urls(self):
+    def download_urls(self, video_url: str):
         archive_api = ArchiveAPI()
         url = "https://www.youtube.com/watch?v="
         self._make_files_and_directories()
@@ -81,25 +65,22 @@ class YouTubeDownloader:
                 with open(self._LOG_DELETED_FILE, "a") as f:
                     f.write(f"{url_id}  " + str(e) + "\n")
 
-        def _download_urls_txt():
+        def _download_url():
             """
             Download urls from a txt file, assumes one url per line
             """
-            with open(self._download_list_file, "r", encoding="utf-8") as f:
-                num_rows = sum(1 for _ in f)
-                f.seek(0)
-                for row in tqdm(f, total=num_rows):
-                    if "playlist?list=" in row:
-                        for url in self.get_yt_playlist_urls(row.strip()):
-                            if archive_api.video_is_archived(_extract_video_id_from_url(url)):
-                                print(url, "is already archived. Skipping.")
-                                continue
-                            _download_youtube_url(_extract_video_id_from_url(url))
-                            thumbnail_downloader.download_thumbnail(_extract_video_id_from_url(url))
-                    if archive_api.video_is_archived(_extract_video_id_from_url(row.strip())):
-                        print(row.strip(), "is already archived. Skipping.")
-                        continue
-                    _download_youtube_url(_extract_video_id_from_url(row.strip()))
-                    thumbnail_downloader.download_thumbnail(_extract_video_id_from_url(row.strip()))
+            if "playlist?list=" in video_url:
+                for url in self.get_yt_playlist_urls(video_url.strip()):
+                    if archive_api.video_is_archived(_extract_video_id_from_url(url)):
+                        print(url, "is already archived. Skipping.")
+                        return
+                    _download_youtube_url(_extract_video_id_from_url(url))
+                    thumbnail_downloader.download_thumbnail_yt(_extract_video_id_from_url(url))
+            if archive_api.video_is_archived(_extract_video_id_from_url(video_url.strip())):
+                print(video_url.strip(), "is already archived. Skipping.")
+                return
+            _download_youtube_url(_extract_video_id_from_url(video_url.strip()))
+            thumbnail_downloader.download_thumbnail_yt(_extract_video_id_from_url(video_url.strip()))
 
-        _download_urls_txt()
+        _download_url()
+        quit()

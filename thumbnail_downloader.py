@@ -12,7 +12,7 @@ RAGTAG_DRIVEBASES = [
     "0ANsY3BPG5rJwUk9PVA",
 ]
 
-def download_thumbnail(video_id: str):
+def download_thumbnail_yt(video_id: str):
     """
     1. Try to download from youtube
     2, If it fails try to download from ragtag
@@ -50,6 +50,8 @@ def download_thumbnail(video_id: str):
     return False
 
 
+
+
 if __name__ == "__main__":
     with open("thumbnail_queue.txt", "r", encoding="utf-8") as download_queue_file:
         all_files = os.listdir("thumbnails")
@@ -59,4 +61,4 @@ if __name__ == "__main__":
         if file_name in all_files:
             print("Thumbnail already downloaded:", video_id)
             continue
-        download_thumbnail(video_id)
+        download_thumbnail_yt(video_id)
