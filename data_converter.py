@@ -31,7 +31,7 @@ def convert_all_mp4_to_webm(directory: str):
     """
     for file in get_all_files_in_directory(directory, ".mp4"):
         subprocess.run(
-            f"ffmpeg -i {directory}/{file} -c:v libvpx -c:a libvorbis {directory}/{file.split('.')[0]}.webm"
+            f"ffmpeg -i {directory}/{file} -c:v libvpx-vp9 -crf 4 -b:v 0 {directory}/{file.split('.')[0]}.webm"
         , shell=True)
         os.remove(directory+"/"+file)
 
