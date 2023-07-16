@@ -44,6 +44,9 @@ def download_and_upload():
                 return
         elif "bilibili" in url:
             bili_downloader.download_urls(url)
+    if not len(list(data_converter.get_all_files_in_directory(CONFIG.get("path", "download_output_path")))):
+        print("No videos downloaded. Skipping conversion...")
+        return
     data_converter.convert_all_mkv_to_webm(
         CONFIG.get("path", "download_output_path")
     )
