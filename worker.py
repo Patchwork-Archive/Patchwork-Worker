@@ -11,16 +11,21 @@ import argparse
 CONFIG = file_util.read_config("config.ini")
 
 
-def rclone_to_cloud():
+def rclone_to_cloud(upload_metadata=False):
     """
     Uploads all files in the download_output_path to the cloud
     """
+    if upload_metadata:
+         subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","metadata_output_path")}" "{CONFIG.get("path","rclone_metadata_target")}"', shell=True)
+         return
     subprocess.run(
         f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","download_output_path")}" "{CONFIG.get("path","rclone_cloud_target")}"',
         shell=True,
     )
     subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","thumbnail_output_path")}" "{CONFIG.get("path","rclone_thumbnail_target")}"', shell=True)
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","metadata_output_path")}" "{CONFIG.get("path","rclone_metadata_target")}"', shell=True)
+    
+       
+    
 
 
 def download_and_upload():
@@ -55,6 +60,7 @@ def download_and_upload():
     )
     rclone_to_cloud()
     update_database()
+    rclone_to_cloud(upload_metadata=True)
     discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), ["https://www.youtube.com/watch?v="+video_id.replace(".webm", "") for video_id in list(data_converter.get_all_files_in_directory("output_video", "webm"))])
     file_util.clear_output_folder(CONFIG.get("path", "download_output_path"))
     file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
