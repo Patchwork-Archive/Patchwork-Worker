@@ -40,11 +40,16 @@ def convert_all_mp4_to_webm(directory: str):
 def download_video_data(url: str):
     def convert_description_to_single_line(description):
         return description.replace("\n", " \\n")
-    
     subprocess.run(
-        f"yt-dlp --write-info-json -o temp --skip-download {url}",
+        f'yt-dlp --write-info-json -o temp --skip-download {url}',
         shell=True,
     )
+    subprocess.run(
+        f'yt-dlp --write-info-json -o "metadata_output/%(id)s/temp" --skip-download {url}',
+        shell=True,
+    )
+    
+
     video_obj = json.loads(open("temp.info.json", "r", encoding="utf-8").read())
     if "youtube" in url:
         vid_id = video_obj["id"]
