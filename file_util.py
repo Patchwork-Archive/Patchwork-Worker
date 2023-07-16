@@ -20,5 +20,15 @@ def read_config(file_path: str):
 
 
 def clear_output_folder(file_path: str):
-    for file in os.listdir(file_path):
-        os.remove(os.path.join(file_path, file))
+    for item in os.listdir(file_path):
+        item_path = os.path.join(file_path, item)
+        if os.path.isfile(item_path):
+            os.remove(item_path)
+        elif os.path.isdir(item_path):
+            try:
+                os.rmdir(item_path)
+            except OSError:
+                print(f"Failed to remove folder: {item_path}. It might not be empty.")
+        else:
+            # If the item is neither a file nor a directory (e.g., a symbolic link), ignore it
+            print(f"Ignoring item: {item_path}. It is neither a file nor a folder.")
