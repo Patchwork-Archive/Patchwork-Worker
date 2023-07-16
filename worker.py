@@ -41,7 +41,7 @@ def download_and_upload():
                 yt_downloader.download_urls(url)
             except Exception as e:
                 print("Error downloading youtube video:", e)
-                continue
+                return
         elif "bilibili" in url:
             bili_downloader.download_urls(url)
     data_converter.convert_all_mkv_to_webm(
