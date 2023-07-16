@@ -55,9 +55,11 @@ def download_thumbnail_yt(video_id: str):
     return False
 
 def fix_all_metadata(need_fixing):
+    
     with open ("error_metadata.txt", "w", encoding="utf-8") as error_metadata_file:
         error_metadata_file.write("")
     for video_id in tqdm(need_fixing):
+        fail = True
         if video_id.startswith("BV"):
             url = f"https://www.bilibili.com/video/{video_id}"
         else:
@@ -75,16 +77,18 @@ def fix_all_metadata(need_fixing):
             try:
                 urllib.request.urlretrieve(url, f"metadata_output/{video_id}.info.json")
                 print("Successfully downloaded from Ragtag Drivebase", drive_base)
-                continue
+                break
             except Exception:
                 print("Failed to download from Ragtag Drivebase:", drive_base)
+        if os.path.exists(f"metadata_output/{video_id}.info.json"):
+            continue
         with open("error_metadata.txt", "a", encoding="utf-8") as error_metadata_file:
             print("Failed to download metadata:", video_id)
             error_metadata_file.write(video_id + "\n")
 
 
 if __name__ == "__main__":
-    with open("/home/pinapelz/Repositories/Video-Archive-Worker/needfixing.txt", "r", encoding="utf-8") as needfixing_file:
+    with open("/rootVideo-Archive-Worker/needfixing.txt", "r", encoding="utf-8") as needfixing_file:
         need_fixing = needfixing_file.read().splitlines()
         fix_all_metadata(need_fixing=need_fixing)
 
