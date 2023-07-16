@@ -2,6 +2,7 @@ import worker
 import requests
 import time
 import configparser
+import sys
 
 ERROR_WAIT_TIME = 500 # seconds
 COOLDOWN_WAIT_TIME = 250 # seconds
@@ -40,6 +41,10 @@ def wait_and_check_for_quit(seconds: int):
 
 
 def main():
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--offline_msg":
+            send_heartbeat(sys.argv[2])
+            exit()
     config = read_config("config.ini")
     base_url = config.get("queue", "base_url")
     password = config.get("queue", "worker_password")
