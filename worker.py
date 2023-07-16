@@ -37,7 +37,11 @@ def download_and_upload():
 
     for url in tqdm(file_util.read_file("download_list.txt")):
         if "youtube" in url:
-            yt_downloader.download_urls(url)
+            try:
+                yt_downloader.download_urls(url)
+            except Exception as e:
+                print("Error downloading youtube video:", e)
+                continue
         elif "bilibili" in url:
             bili_downloader.download_urls(url)
     data_converter.convert_all_mkv_to_webm(
