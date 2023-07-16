@@ -45,7 +45,7 @@ def download_video_data(url: str):
         shell=True,
     )
     subprocess.run(
-        f'yt-dlp --write-info-json -o "metadata_output/%(id)s" --skip-download {url}',
+        f'yt-dlp --write-info-json -o "metadata_output/%(id)s.%(ext)s" --skip-download {url}',
         shell=True,
     )
     
@@ -90,4 +90,4 @@ def generate_database_row_data(download_list_path: str):
             yield video_metadata
 
 if __name__ == "__main__":
-    print(download_video_data("https://www.bilibili.com/video/BV1Xe411M7Hw/"))
+    print(download_video_data("https://www.youtube.com/watch?v=K9EIJl-X_Wo"))
