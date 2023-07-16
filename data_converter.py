@@ -45,7 +45,7 @@ def download_video_data(url: str):
         shell=True,
     )
     subprocess.run(
-        f'yt-dlp --write-info-json -o "metadata_output/%(id)s/temp" --skip-download {url}',
+        f'yt-dlp --write-info-json -o "metadata_output/%(id)s" --skip-download {url}',
         shell=True,
     )
     
