@@ -5,6 +5,7 @@ from archive_api import ArchiveAPI
 import thumbnail_downloader
 from video_downloaders.video_downloader import VideoDownloader
 import os
+import re
 
 MAXIMUM_FILE_SIZE_BYTES = 500000000  # 500 MB. Extra check here to make sure we don't download a file that is too big
 
@@ -37,14 +38,11 @@ class YouTubeDownloader(VideoDownloader):
             """
             Gets the video id from a YouTube URL given youtu.be or youtube.com/watch?=
             """
-            if "youtube.com/watch?v=" in url:
-                return url.split("youtube.com/watch?v=")[1]
-            elif "youtu.be/" in url:
-                return url.split("youtu.be/")[1]
-            elif "https://youtube.com/shorts/" in url:
-                return url.split("https://youtube.com/shorts/")[1].replace(
-                    "?feature=share", ""
-                )
+            pattern = r"(?:youtube\.com/watch\?v=|youtu\.be/|https://youtube\.com/shorts/|https://www.youtube\.com/shorts/)([\w-]+)"
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+            return None
 
         def _download_youtube_url(url_id: str):
             output_path = os.path.join(self._output_dir, f"{url_id}")
@@ -82,4 +80,5 @@ class YouTubeDownloader(VideoDownloader):
             _download_youtube_url(_extract_video_id_from_url(video_url.strip()))
             thumbnail_downloader.download_thumbnail_yt(_extract_video_id_from_url(video_url.strip()))
 
-        _download_url()
+       # _download_url()
+
