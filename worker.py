@@ -61,7 +61,7 @@ def download_and_upload():
     rclone_to_cloud()
     update_database()
     rclone_to_cloud(upload_metadata=True)
-    discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), ["https://archive.pinapelz.com/watch?v="+video_id.replace(".webm", "") for video_id in list(data_converter.get_all_files_in_directory("output_video", "webm"))])
+    discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), ["https://archive.pinapelz.moe/watch?v="+video_id.replace(".webm", "") for video_id in list(data_converter.get_all_files_in_directory("output_video", "webm"))])
     file_util.clear_output_folder(CONFIG.get("path", "download_output_path"))
     file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
     file_util.clear_output_folder(CONFIG.get("path", "metadata_output_path"))
