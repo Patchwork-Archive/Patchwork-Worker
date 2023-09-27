@@ -39,6 +39,7 @@ def download_and_upload():
     file_util.clear_output_folder(CONFIG.get("path", "download_output_path"))
     file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
     file_util.clear_output_folder(CONFIG.get("path", "metadata_output_path"))
+    file_util.clear_output_folder(CONFIG.get("path", "subtitle_output_path"))
     yt_downloader = YouTubeDownloader(CONFIG.get("path", "download_output_path"))
     bili_downloader = BiliBiliDownloader(CONFIG.get("path", "download_output_path"), cookies=CONFIG.get("queue", "bilibili_cookies"))
 
