@@ -72,6 +72,7 @@ def main():
         else:
             print("An error occurred. Sending offline heartbeat...")
             send_heartbeat("Offline - An error occured " + str(e))
+            print(e)
             
         
 
