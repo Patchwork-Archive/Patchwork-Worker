@@ -6,6 +6,7 @@ import discord_webhook
 import os
 from video_types import VideoType
 import shutil
+import archive_api
 from datetime import datetime
 
 CONFIG = file_util.read_config("config.ini")
@@ -57,6 +58,11 @@ def archive_video(url: str):
     """
     Runs through the full routine of downloading a video, thumbnail, metadata, and captions
     """
+    write_debug_log(f"New task received: {url} || Beginning archival...")
+    archive_api = archive_api.ArchiveAPI()
+    if archive_api.video_is_archived(url):
+        write_debug_log("Video is already archived. Skipping...")
+        return
     if os.path.exists(CONFIG.get("path", "output_dir")):
         shutil.rmtree(CONFIG.get("path", "output_dir"))
     def classify_video_type() -> tuple:
@@ -73,7 +79,6 @@ def archive_video(url: str):
             # return VideoType.BILIBILI
         else:
             return None
-    write_debug_log(f"New task received: {url} || Beginning archival...")
     video_type  = classify_video_type()[0]
     video_downloader = classify_video_type()[1]
     write_debug_log("Classified video type as " + video_type.name)
