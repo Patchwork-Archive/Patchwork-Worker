@@ -1,7 +1,7 @@
 import requests
 import json
 
-def send_completed_message(webhook_url: str, urls: list):
+def send_completed_message(webhook_url: str, url: str, message: str = "The following video has been archived\n\n"):
     """
     Optionally sends a message to a Discord webhook when a video has been archived
     Used for notification purposes/broadcasting
@@ -10,9 +10,9 @@ def send_completed_message(webhook_url: str, urls: list):
         print("No Discord webhook URL provided. Skipping...")
         return
     urls = "\n".join(urls)
-    message = f"The Following Videos Have Been Archived\n\n{urls}"
+    message_text = f"{message}{url}"
     payload = {
-        "content": message,
+        "content": message_text,
     }
     payload_json = json.dumps(payload)
     response = requests.post(webhook_url, data=payload_json, headers={"Content-Type": "application/json"})
