@@ -2,6 +2,10 @@ import requests
 import json
 
 def send_completed_message(webhook_url: str, urls: list):
+    """
+    Optionally sends a message to a Discord webhook when a video has been archived
+    Used for notification purposes/broadcasting
+    """
     if webhook_url == "":
         print("No Discord webhook URL provided. Skipping...")
         return

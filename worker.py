@@ -1,98 +1,38 @@
-import data_converter
 from video_downloaders.yt_downloader import YouTubeDownloader
-from video_downloaders.bili_downloader import BiliBiliDownloader
 import subprocess
 import file_util
 from sql.sql_handler import SQLHandler
-from tqdm import tqdm
 import discord_webhook
-import argparse
+import os
+from video_types import VideoType
+import shutil
+from datetime import datetime
 
 CONFIG = file_util.read_config("config.ini")
 
-
-def rclone_to_cloud(upload_metadata=False, upload_subtitles=False):
+def write_debug_log(message: str) -> None:
     """
-    Uploads all files in the download_output_path to the cloud
+    Prints a message to the standard output with a timestamp
+    :param message: str
     """
-    if upload_metadata:
-         subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","metadata_output_path")}" "{CONFIG.get("path","rclone_metadata_target")}"', shell=True)
-         return
-    if upload_subtitles:
-        subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","subtitle_output_path")}" "{CONFIG.get("path","rclone_subtitle_target")}"', shell=True)
-        return
-    subprocess.run(
-        f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","download_output_path")}" "{CONFIG.get("path","rclone_cloud_target")}"',
-        shell=True,
-    )
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","thumbnail_output_path")}" "{CONFIG.get("path","rclone_thumbnail_target")}"', shell=True)
-    
-       
-    
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
 
 
-def download_and_upload():
+def rclone_to_cloud():
     """
-    Downloads videos from the download_list.txt file and uploads them to the cloud
-    (optional) sends a message to discord webhook
+    Uploads all files in output folder to respective S3 bucket locations
     """
-    file_util.clear_output_folder(CONFIG.get("path", "download_output_path"))
-    file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
-    file_util.clear_output_folder(CONFIG.get("path", "metadata_output_path"))
-    file_util.clear_output_folder(CONFIG.get("path", "subtitle_output_path"))
-    yt_downloader = YouTubeDownloader(CONFIG.get("path", "download_output_path"))
-    bili_downloader = BiliBiliDownloader(CONFIG.get("path", "download_output_path"), cookies=CONFIG.get("queue", "bilibili_cookies"))
+    write_debug_log("Preparing to upload files to cloud...")
+    write_debug_log("Upload video file to cloud using rclone")
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","output_dir")}/video" "{CONFIG.get("path","rclone_video_target")}"', shell=True)
+    write_debug_log("Upload thumbnail file to cloud using rclone")
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","output_dir")}/thumbnail" "{CONFIG.get("path","rclone_thumbnail_target")}"', shell=True)
+    write_debug_log("Upload metadata file to cloud using rclone")
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","output_dir")}/metadata" "{CONFIG.get("path","rclone_metadata_target")}"', shell=True)
+    write_debug_log("Upload captions to cloud using rclone")
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","output_dir")}/captions" "{CONFIG.get("path","rclone_captions_target")}"', shell=True)
 
-
-    for url in tqdm(file_util.read_file("download_list.txt")):
-        if "youtube" in url:
-            try:
-                yt_downloader.download_urls(url)
-            except Exception as e:
-                print("Error downloading youtube video:", e)
-                return
-        elif "bilibili" in url:
-            bili_downloader.download_urls(url)
-    if not len(list(data_converter.get_all_files_in_directory(CONFIG.get("path", "download_output_path")))):
-        print("No videos downloaded. Skipping conversion...")
-        return
-    data_converter.convert_all_mkv_to_webm(
-        CONFIG.get("path", "download_output_path")
-    )
-    data_converter.convert_all_mp4_to_webm(
-        CONFIG.get("path", "download_output_path")
-    )
-    data_converter.download_subtitles(url)
-    rclone_to_cloud()
-    update_database()
-    rclone_to_cloud(upload_metadata=True)
-    rclone_to_cloud(upload_subtitles=True)
-    discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), ["https://archive.pinapelz.moe/watch?v="+video_id.replace(".webm", "") for video_id in list(data_converter.get_all_files_in_directory("output_video", "webm"))])
-    file_util.clear_output_folder(CONFIG.get("path", "download_output_path"))
-    file_util.clear_output_folder(CONFIG.get("path", "thumbnail_output_path"))
-    file_util.clear_output_folder(CONFIG.get("path", "metadata_output_path"))
-
-def main():
-    parser = argparse.ArgumentParser(description='Archiving Worker Script')
-    parser.add_argument('--archive', type=str, help='URL to archive')
-    parser.add_argument('--no-download', action='store_true', help='Optional flag')
-    args = parser.parse_args()
-    if args.archive is not None:
-        with open("download_list.txt", "w") as f:
-            f.write(args.archive + "\n")
-    if not args.no_download:
-        download_and_upload()
-
-def execute_server_worker(url: str):
-    """
-    To be executed through server.py when deploying an automatic archival
-    """
-    with open("download_list.txt", "w") as f:
-        f.write(url + "\n")
-    download_and_upload()
-
-
-def update_database():
+def update_database(video_data: dict):
     hostname = CONFIG.get("database", "host")
     user = CONFIG.get("database", "user")
     password = CONFIG.get("database", "password")
@@ -107,12 +47,49 @@ def update_database():
         ssh_username = None
         ssh_password = None
     server = SQLHandler(hostname, user, password, database, ssh_host, ssh_username, ssh_password, remote_bind)
-    # server.create_table("songs", "video_id VARCHAR(255) PRIMARY KEY, title TEXT, channel_name VARCHAR(255), channel_id VARCHAR(255), upload_date VARCHAR(255), description TEXT")
     headers = "video_id, title, channel_name, channel_id, upload_date, description"
-    for video_data in tqdm(data_converter.generate_database_row_data("download_list.txt")):
-        if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
-            break
+    if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
+        write_debug_log("Error inserting row into database")
+        return
     server.close_connection()
 
+def archive_video(url: str):
+    """
+    Runs through the full routine of downloading a video, thumbnail, metadata, and captions
+    """
+    if os.path.exists(CONFIG.get("path", "output_dir")):
+        shutil.rmtree(CONFIG.get("path", "output_dir"))
+    def classify_video_type() -> tuple:
+        """
+        Classifies the video type based on the URL
+        :return: VideoType
+        """
+        if "youtube.com" in url:
+            return VideoType.YOUTUBE, YouTubeDownloader(CONFIG.get("path", "output_dir"))
+        elif "bilibili.com" in url:
+            # stub. TODO: re-implement Bilibili support with new protocol and project structure
+            write_debug_log("Bilibili support is currently disabled")
+            return None
+            # return VideoType.BILIBILI
+        else:
+            return None
+    write_debug_log(f"New task received: {url} || Beginning archival...")
+    video_type  = classify_video_type()[0]
+    video_downloader = classify_video_type()[1]
+    write_debug_log("Classified video type as " + video_type.name)
+    video_downloader.download_video(url, "webm")
+    video_downloader.download_thumbnail(url)
+    video_metadata_dict = video_downloader.download_metadata(url)
+    update_database(video_metadata_dict)
+    video_downloader.download_captions(url)
+
+def execute_server_worker(url: str):
+    """
+    To be executed through server.py when deploying an automatic archival
+    """
+    archive_video(url)
+    rclone_to_cloud()
+    discord_webhook.send_webhook(url)
+
 if __name__ == "__main__":
-    main()
+    pass
