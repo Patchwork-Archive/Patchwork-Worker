@@ -9,7 +9,6 @@ def send_completed_message(webhook_url: str, url: str, message: str = "The follo
     if webhook_url == "":
         print("No Discord webhook URL provided. Skipping...")
         return
-    urls = "\n".join(urls)
     message_text = f"{message}{url}"
     payload = {
         "content": message_text,

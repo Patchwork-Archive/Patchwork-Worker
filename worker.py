@@ -59,10 +59,6 @@ def archive_video(url: str):
     Runs through the full routine of downloading a video, thumbnail, metadata, and captions
     """
     write_debug_log(f"New task received: {url} || Beginning archival...")
-    archiver_api = ArchiveAPI()
-    if archiver_api.video_is_archived(url):
-        write_debug_log("Video is already archived. Skipping...")
-        return
     if os.path.exists(CONFIG.get("path", "output_dir")):
         shutil.rmtree(CONFIG.get("path", "output_dir"))
     def classify_video_type() -> tuple:
@@ -70,7 +66,7 @@ def archive_video(url: str):
         Classifies the video type based on the URL
         :return: VideoType
         """
-        if "youtube.com" in url:
+        if "youtube.com" or "youtu.be" in url:
             return VideoType.YOUTUBE, YouTubeDownloader(CONFIG.get("path", "output_dir"))
         elif "bilibili.com" in url:
             # stub. TODO: re-implement Bilibili support with new protocol and project structure
@@ -82,6 +78,10 @@ def archive_video(url: str):
     video_type  = classify_video_type()[0]
     video_downloader = classify_video_type()[1]
     write_debug_log("Classified video type as " + video_type.name)
+    archiver_api = ArchiveAPI()
+    if archiver_api.video_is_archived(video_downloader._get_video_id(url)):
+        write_debug_log("Video is already archived. Skipping...")
+        return
     video_downloader.download_video(url, "webm")
     video_downloader.download_thumbnail(url)
     video_metadata_dict = video_downloader.download_metadata(url)
@@ -92,9 +92,13 @@ def execute_server_worker(url: str):
     """
     To be executed through server.py when deploying an automatic archival
     """
-    archive_video(url)
-    rclone_to_cloud()
-    discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url)
+    try:
+        archive_video(url)
+        rclone_to_cloud()
+        discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url)
+    except Exception as e:
+        write_debug_log(f"Error encountered: {e}")
+        discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url, f"An error occurred while archiving the following video:\n\n{url}\n\nError: {e}")
 
 if __name__ == "__main__":
     pass

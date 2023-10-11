@@ -3,6 +3,7 @@ from video_downloaders.video_downloader import VideoDownloader
 import os
 import json
 from enum import Enum
+from archive_api import ArchiveAPI
 
 class VideoType(Enum):
     VIDEO = 1
