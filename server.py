@@ -59,7 +59,7 @@ def main():
                 next_video_data = json.loads(next_video.text)
                 send_heartbeat("Archiving " + next_video_data["next_video"])
                 mode = next_video_data["mode"]
-                worker.execute_server_worker(next_video.text)
+                worker.execute_server_worker(next_video_data["next_video"], mode)
             elif next_video.status_code == 401:
                 print("Invalid credentials. The password may be incorrect")
                 send_heartbeat("Invalid credentials. The password may be incorrect")
