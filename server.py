@@ -3,6 +3,7 @@ import requests
 import time
 import configparser
 import sys
+import json
 
 ERROR_WAIT_TIME = 500 # seconds
 COOLDOWN_WAIT_TIME = 250 # seconds
@@ -55,7 +56,9 @@ def main():
             next_video = requests.get(f"{base_url}/api/worker/next", headers=headers)
             if next_video.status_code == 200:
                 print("Found video to archive. Starting...")
-                send_heartbeat("Archiving " + next_video.text)
+                next_video_data = json.loads(next_video.text)
+                send_heartbeat("Archiving " + next_video_data["next_video"])
+                mode = next_video_data["mode"]
                 worker.execute_server_worker(next_video.text)
             elif next_video.status_code == 401:
                 print("Invalid credentials. The password may be incorrect")

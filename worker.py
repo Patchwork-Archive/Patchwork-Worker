@@ -54,9 +54,11 @@ def update_database(video_data: dict):
         return
     server.close_connection()
 
-def archive_video(url: str):
+def archive_video(url: str, mode: int):
     """
     Runs through the full routine of downloading a video, thumbnail, metadata, and captions
+    :param url: str
+    :param force: int - 0 for normal archival, 1 for force archival
     """
     write_debug_log(f"New task received: {url} || Beginning archival...")
     if os.path.exists(CONFIG.get("path", "output_dir")):
@@ -79,7 +81,7 @@ def archive_video(url: str):
     video_downloader = classify_video_type()[1]
     write_debug_log("Classified video type as " + video_type.name)
     archiver_api = ArchiveAPI()
-    if archiver_api.video_is_archived(video_downloader._get_video_id(url)):
+    if mode != 1 and archiver_api.video_is_archived(video_downloader._get_video_id(url)):
         write_debug_log("Video is already archived. Skipping...")
         return
     video_downloader.download_video(url, "webm")
@@ -88,12 +90,14 @@ def archive_video(url: str):
     update_database(video_metadata_dict)
     video_downloader.download_captions(url)
 
-def execute_server_worker(url: str):
+def execute_server_worker(url: str, mode: int = 0):
     """
     To be executed through server.py when deploying an automatic archival
+    :param url: str
+    :param mode: int - 0 for normal archival, 1 for force archival
     """
     try:
-        archive_video(url)
+        archive_video(url, mode)
         rclone_to_cloud()
         discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url)
     except Exception as e:
