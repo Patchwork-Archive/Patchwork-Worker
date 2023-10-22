@@ -1,6 +1,5 @@
 # Patchwork-Worker
 Script for archiving videos from YouTube and directly upload to a S3 compatible storage through rclone.
 
-Running through `worker.py` as `__main__` will download all videos from download_list.txt and upload them to the S3 compatible storage.
-
-`server.py` is the worker mode where the program will fetch the next queue from the server and download the video and upload it to the S3 compatible storage. This process will repeat until execution is stopped.
+# Deploying
+After configuring `config.ini` and running `server.py`, the worker will send it's heartbeat (status) to the backend server every 2 minutes. During the same loop it will also check to see if there are any videos in the queue, if so then it will begin archive them.
