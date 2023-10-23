@@ -1,4 +1,5 @@
 from video_downloaders.yt_downloader import YouTubeDownloader
+from video_downloaders.bili_downloader import BiliDownloader
 import subprocess
 import file_util
 from sql.sql_handler import SQLHandler
@@ -68,12 +69,11 @@ def archive_video(url: str, mode: int):
         Classifies the video type based on the URL
         :return: VideoType
         """
-        if "youtube.com" or "youtu.be" in url:
+        if "youtube.com" in url or "youtu.be" in url:
             return VideoType.YOUTUBE, YouTubeDownloader(CONFIG.get("path", "output_dir"))
         elif "bilibili.com" in url:
             # stub. TODO: re-implement Bilibili support with new protocol and project structure
-            write_debug_log("Bilibili support is currently disabled")
-            return None
+            return VideoType.BILIBILI, BiliDownloader(CONFIG.get("path", "output_dir"))
             # return VideoType.BILIBILI
         else:
             return None
@@ -105,4 +105,4 @@ def execute_server_worker(url: str, mode: int = 0):
         discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url, f"An error occurred while archiving the following video:\n\n{url}\n\nError: {e}")
 
 if __name__ == "__main__":
-    pass
+    rclone_to_cloud()
