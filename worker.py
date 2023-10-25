@@ -72,9 +72,7 @@ def archive_video(url: str, mode: int):
         if "youtube.com" in url or "youtu.be" in url:
             return VideoType.YOUTUBE, YouTubeDownloader(CONFIG.get("path", "output_dir"))
         elif "bilibili.com" in url:
-            # stub. TODO: re-implement Bilibili support with new protocol and project structure
             return VideoType.BILIBILI, BiliDownloader(CONFIG.get("path", "output_dir"))
-            # return VideoType.BILIBILI
         else:
             return None
     video_type  = classify_video_type()[0]
@@ -105,4 +103,5 @@ def execute_server_worker(url: str, mode: int = 0):
         discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url, f"An error occurred while archiving the following video:\n\n{url}\n\nError: {e}")
 
 if __name__ == "__main__":
-    rclone_to_cloud()
+    # TODO: add commandline arguments support
+    print("This script is not meant to be run directly. Please run server.py instead.")

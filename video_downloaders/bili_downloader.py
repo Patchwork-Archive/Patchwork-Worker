@@ -13,6 +13,7 @@ class BiliDownloader(VideoDownloader):
         output_dir: str,
         log_skip_file: str = "logs/skipped.txt",
         log_deleted_file: str = "logs/deleted.txt",
+        cookies_file: str = "data/bilicookies.txt"
     ):
         """
         Creates a new YouTubeDownloader object
@@ -21,6 +22,7 @@ class BiliDownloader(VideoDownloader):
         :param log_deleted_file: str - The file to log deleted videos to
         """
         super().__init__(output_dir, log_skip_file, log_deleted_file)
+        self._cookies_file = cookies_file
 
     def _get_video_id(self, video_url: str) -> str:
         """
@@ -30,14 +32,14 @@ class BiliDownloader(VideoDownloader):
         :return: str
         """
         if "bilibili.com" in video_url:
-            match_result = re.search("https:\/\/www\.bilibili\.com\/video\/(BV[0-9A-Za-z]+)\/", video_url)
+            match_result = re.search("https:\/\/www\.bilibili\.com\/video\/(BV[0-9A-Za-z]+)", video_url)
             return match_result.group(1)
         
 
     def download_video(self, video_url: str, file_type:str="mp4"):
         self._write_debug_log(f"Downloading video using yt-dlp {video_url}")
         subprocess.run(
-            f'yt-dlp "{video_url}" -f "bestvideo+bestaudio" -o "{self._output_dir}/video/%(id)s.%(ext)s" --add-metadata',
+            f'yt-dlp "{video_url}" -f "bestvideo+bestaudio" -o "{self._output_dir}/video/%(id)s.%(ext)s" --cookies "{self._cookies_file}" --add-metadata',
             shell=True,
         )
         if os.path.getsize(f"{self._output_dir}/video/{self._get_video_id(video_url)}.mp4") > self._max_file_size_bytes:
@@ -45,6 +47,9 @@ class BiliDownloader(VideoDownloader):
             self._write_to_log_deleted(video_url)
             os.remove(f"{self._output_dir}/video/{self._get_video_id(video_url)}.mp4")
             return
+        # Extra step. convert to webm
+        subprocess.run(f"ffmpeg -i {self._output_dir}/video/{self._get_video_id(video_url)}.mp4 -c:v libsvtav1 -preset 6 -crf 30 -g 240 -pix_fmt yuv420p10le -svtav1-params tune=0:film-grain=8 -c:a libopus -b:a 128k -deadline realtime {self._output_dir}/video/{self._get_video_id(video_url)}.webm", shell=True)
+        os.remove(f"{self._output_dir}/video/{self._get_video_id(video_url)}.mp4")
 
     def download_thumbnail(self, video_url: str):
         self._write_debug_log(f"Downloading thumbnail using yt-dlp {video_url}")
