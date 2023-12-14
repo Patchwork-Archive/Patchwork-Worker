@@ -1,60 +1,32 @@
 import mysql.connector
 from mysql.connector import Error, errorcode
-import sshtunnel
 
-sshtunnel.SSH_TIMEOUT = 20.0
-sshtunnel.TUNNEL_TIMEOUT = 20.0
 
 class SQLHandler:
-    def __init__(self, host_name: str, user_name: str, user_password: str, database_name: str = None, ssh_host: str = None, ssh_username: str = None, ssh_password: str = None, ssh_remote_bind: str = None):
+    def __init__(self, host_name: str, user_name: str, user_password: str, database_name: str = None, ssl_ca="/etc/ssl/certs/ca-certificates.crt"):
         self.host_name = host_name
         self.username = user_name
         self.password = user_password
         self.database_name = database_name
-        if ssh_host is None or ssh_username is None or ssh_password is None:
-            self.connection = self._create_server_connection(
-                host_name, user_name, user_password)
-        else:
-            self.connection = self._create_ssh_server_connection(
-                ssh_host, ssh_username, ssh_password, ssh_remote_bind, host_name, user_name, user_password)
+        self.ssl_ca = ssl_ca
+        self.connection = self._create_server_connection(
+            host_name, user_name, user_password, ssl_ca=ssl_ca)
         if database_name is not None:
             self._load_database(database_name)
 
-    def _create_server_connection(self, host_name: str, user_name: str, user_password: str) -> mysql.connector:
+    def _create_server_connection(self, host_name: str, user_name: str, user_password: str, ssl_ca: str) -> mysql.connector:
         connection = None
         try:
-            connection = mysql.connector.connect(host=host_name, user=user_name, passwd=user_password, charset="utf8mb4", collation="utf8mb4_general_ci")
+            connection = mysql.connector.connect(host=host_name, user=user_name, passwd=user_password, 
+                                                 charset="utf8mb4", 
+                                                 collation="utf8mb4_general_ci",
+                                                 ssl_ca=ssl_ca)
             connection.set_charset_collation('utf8mb4', 'utf8mb4_general_ci')
             print("MySQL Database connection successful")
         except Error as err:
             print(f"Error: '{err}'")
         return connection
     
-    def _create_ssh_server_connection(self, ssh_host:str, ssh_username: str, ssh_password: str, remote_bind:str, host_name: str, user_name: str, user_password: str) -> mysql.connector:
-        connection = None
-        try:
-            self._tunnel = sshtunnel.SSHTunnelForwarder(
-                (ssh_host),
-                ssh_username=ssh_username,
-                ssh_password=ssh_password,
-                remote_bind_address=(remote_bind, 3306),
-            )
-            self._tunnel.start()
-            print("SSH connection successful")
-            connection = mysql.connector.connect(
-                host=host_name,
-                user=user_name,
-                passwd=user_password,
-                port=self._tunnel.local_bind_port,
-                database=self.database_name,
-            )
-            print("MySQL Database connection successful")
-        except Error as err:
-            print(f"Error: '{err}'")
-        if connection is None:
-            print("Connection failed")
-            exit(1)
-        return connection
 
     def get_connection(self):
         return self.connection
@@ -74,7 +46,6 @@ class SQLHandler:
             print(f"Failed to load database: {err}")
             exit(1)
         try:
-            cursor.execute(f"USE {database_name}")
             print(f"Database {database_name} loaded successfully")
         except Error as err:
             print(f"Database {database_name} does not exist")
@@ -111,7 +82,6 @@ class SQLHandler:
 
     def close_connection(self):
         if self.connection.is_connected():
-            self._tunnel.stop()
             self.connection.close()
             print("MySQL connection is closed")
     

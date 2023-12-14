@@ -47,7 +47,7 @@ def queue_video(videoID: str) -> bool:
     }
     data = {
         'url': videoID,
-        'mode': 1
+        'mode': 0
     }
     response = requests.post(queueAPI, headers=headers, data=data)
     return response.status_code == 200

@@ -39,16 +39,7 @@ def update_database(video_data: dict):
     user = CONFIG.get("database", "user")
     password = CONFIG.get("database", "password")
     database = CONFIG.get("database", "database")
-    ssh_host = CONFIG.get("database", "ssh_host")
-    ssh_username = CONFIG.get("database", "ssh_username")
-    ssh_password = CONFIG.get("database", "ssh_password")
-    remote_bind = CONFIG.get("database", "remote_bind")
-    if ssh_host == "" or ssh_username == "" or ssh_password == "":
-        print("No or Invalid SSH credentials provided. Skipping...")
-        ssh_host = None
-        ssh_username = None
-        ssh_password = None
-    server = SQLHandler(hostname, user, password, database, ssh_host, ssh_username, ssh_password, remote_bind)
+    server = SQLHandler(hostname, user, password, database)
     headers = "video_id, title, channel_name, channel_id, upload_date, description"
     if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
         write_debug_log("Error inserting row into database")
