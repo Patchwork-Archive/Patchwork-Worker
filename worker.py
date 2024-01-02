@@ -79,6 +79,20 @@ def archive_video(url: str, mode: int):
     update_database(video_metadata_dict)
     video_downloader.download_captions(url)
 
+def delete_archived_video(video_id: str):
+    """
+    Deletes an archived video from the archive
+    :param video_id: str
+    """
+    print(f"Deleting video {video_id} from archive...")
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_video_target")}/{video_id}.webm"', shell=True)
+    print(f"Deleting thumbnail {video_id} from archive...")
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_thumbnail_target")}/{video_id}.jpg"', shell=True)
+    print(f"Deleting metadata {video_id} from archive...")
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_metadata_target")}/{video_id}.json"', shell=True)
+    print(f"Deleting captions {video_id} from archive...")
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_captions_target")}/{video_id}"', shell=True)
+
 def execute_server_worker(url: str, mode: int = 0):
     """
     To be executed through server.py when deploying an automatic archival
@@ -86,6 +100,10 @@ def execute_server_worker(url: str, mode: int = 0):
     :param mode: int - 0 for normal archival, 1 for force archival
     """
     try:
+        if mode == 2:
+            delete_archived_video(url)
+            discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url, "Video deleted from archive.")
+            return
         archive_video(url, mode)
         rclone_to_cloud()
         discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url)
