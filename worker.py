@@ -51,7 +51,7 @@ def update_database(video_data: dict):
         return
     server.close_connection()
 
-def archive_video(url: str, mode: int):
+def archive_video(url: str, mode: int)->bool:
     """
     Runs through the full routine of downloading a video, thumbnail, metadata, and captions
     :param url: str
@@ -77,12 +77,13 @@ def archive_video(url: str, mode: int):
     archiver_api = ArchiveAPI()
     if mode != 1 and archiver_api.video_is_archived(video_downloader._get_video_id(url)):
         write_debug_log("Video is already archived. Skipping...")
-        return
+        return False
     video_downloader.download_video(url, "webm")
     video_downloader.download_thumbnail(url)
     video_metadata_dict = video_downloader.download_metadata(url)
     update_database(video_metadata_dict)
     video_downloader.download_captions(url)
+    return True
 
 def delete_archived_video(video_id: str):
     """
@@ -109,7 +110,9 @@ def execute_server_worker(url: str, mode: int = 0):
             delete_archived_video(url)
             discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url, "Video deleted from archive.")
             return
-        archive_video(url, mode)
+        archive_result = archive_video(url, mode)
+        if archive_result is False:
+            return
         rclone_to_cloud()
         discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url)
     except Exception as e:
