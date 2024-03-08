@@ -20,6 +20,7 @@ class SQLHandler:
             connection = mysql.connector.connect(host=host_name, user=user_name, passwd=user_password, 
                                                  charset="utf8mb4", 
                                                  collation="utf8mb4_general_ci",
+                                                 database=self.database_name,
                                                  ssl_ca=ssl_ca)
             connection.set_charset_collation('utf8mb4', 'utf8mb4_general_ci')
             print("MySQL Database connection successful")
