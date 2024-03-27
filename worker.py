@@ -9,6 +9,7 @@ from video_types import VideoType
 import shutil
 from archive_api import ArchiveAPI
 from datetime import datetime
+import cutlet
 
 CONFIG = file_util.read_config("config.ini")
 
@@ -48,6 +49,11 @@ def update_database(video_data: dict):
         return
     if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
         write_debug_log("Error inserting row into database")
+        return
+    katsu = cutlet.Cutlet()
+    romanized_title = katsu.romaji(video_data["title"])
+    if server.insert_row("romanized", "video_id, romanized_title", (video_data["video_id"], romanized_title)) is False:
+        write_debug_log("Error inserting romanization into database")
         return
     server.close_connection()
 
