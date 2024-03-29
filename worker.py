@@ -101,7 +101,7 @@ def delete_archived_video(video_id: str):
     print(f"Deleting thumbnail {video_id} from archive...")
     subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_thumbnail_target")}/{video_id}.jpg"', shell=True)
     print(f"Deleting metadata {video_id} from archive...")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_metadata_target")}/{video_id}.json"', shell=True)
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_metadata_target")}/{video_id}.info.json"', shell=True)
     print(f"Deleting captions {video_id} from archive...")
     subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_captions_target")}/{video_id}"', shell=True)
 
