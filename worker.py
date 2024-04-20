@@ -1,5 +1,6 @@
 from video_downloaders.yt_downloader import YouTubeDownloader
 from video_downloaders.bili_downloader import BiliDownloader
+import channel_meta_archiver
 import subprocess
 import file_util
 from sql.sql_handler import SQLHandler
@@ -35,6 +36,18 @@ def rclone_to_cloud():
     write_debug_log("Upload captions to cloud using rclone")
     subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","output_dir")}/captions" "{CONFIG.get("path","rclone_captions_target")}"', shell=True)
 
+def rclone_channel_images_to_cloud(pfp_path: str, banner_path: str):
+    """
+    Uploads all channel images in output folder to respective S3 bucket locations
+    """
+    write_debug_log("Preparing to upload channel images to cloud...")
+    write_debug_log("Upload banner file to cloud using rclone")
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{banner_path}" "{CONFIG.get("path","rclone_banner_target")}"', shell=True)
+    write_debug_log("Upload pfp file to cloud using rclone")
+    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{pfp_path}" "{CONFIG.get("path","rclone_pfp_target")}"', shell=True)
+    os.remove(pfp_path)
+    os.remove(banner_path)
+
 def update_database(video_data: dict):
     hostname = CONFIG.get("database", "host")
     user = CONFIG.get("database", "user")
@@ -45,16 +58,19 @@ def update_database(video_data: dict):
     if server.check_row_exists("songs", "video_id", video_data["video_id"]):
         write_debug_log("Video already exists in database. Updating row instead...")
         server.execute_query(f"UPDATE songs SET title = '{video_data['title']}', channel_name = '{video_data['channel_name']}', channel_id = '{video_data['channel_id']}', upload_date = '{video_data['upload_date']}', description = '{video_data['description']}' WHERE video_id = '{video_data['video_id']}'")
-        server.close_connection()
-        return
-    if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
-        write_debug_log("Error inserting row into database")
-        return
+    else: 
+        if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
+            write_debug_log("Error inserting row into database")
+            return
     katsu = cutlet.Cutlet()
     romanized_title = katsu.romaji(video_data["title"])
     if server.insert_row("romanized", "video_id, romanized_title", (video_data["video_id"], romanized_title)) is False:
         write_debug_log("Error inserting romanization into database")
-        return
+    if server.check_row_exists("channels", "channel_id", video_data["channel_id"]) is False:
+        channel_data = channel_meta_archiver.download_youtube_banner_pfp_desc(video_data["channel_id"], CONFIG.get("youtube", "api_key"))
+        romanized_name = katsu.romaji(channel_data.name)
+        rclone_channel_images_to_cloud(channel_data.pfp, channel_data.banner)
+        server.insert_row("channels", "channel_id, channel_name, romanized_name, description", (video_data["channel_id"], channel_data.name, romanized_name, channel_data.description))
     server.close_connection()
 
 def archive_video(url: str, mode: int)->bool:
