@@ -141,6 +141,36 @@ def execute_server_worker(url: str, mode: int = 0):
         write_debug_log(f"Error encountered: {e}")
         discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url, f"An error occurred while archiving the following video:\n\n{url}\n\nError: {e}")
 
+# This function should only be manually called when you want to generate
+# all channel images again
+def update_all_channels():
+    import csv
+    hostname = CONFIG.get("database", "host")
+    user = CONFIG.get("database", "user")
+    password = CONFIG.get("database", "password")
+    database = CONFIG.get("database", "database")
+    katsu = cutlet.Cutlet()
+    server = SQLHandler(hostname, user, password, database)
+    failed_file = open('failed_channels.csv', 'w')
+    with open('channels_patchwork.csv', 'r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            channel_id = row[0]
+            channel_name = row[1]
+            print(f"Processing channel {channel_id}...")
+            if server.check_row_exists("channels", "channel_id", channel_id):
+                write_debug_log(f"Channel {channel_id} already exists in database. Skipping...")
+                continue
+            try:
+                channel_data = channel_meta_archiver.download_youtube_banner_pfp_desc(channel_id, CONFIG.get("youtube", "api_key"))
+                romanized_name = katsu.romaji(channel_data.name)
+                server.insert_row("channels", "channel_id, channel_name, romanized_name, description", (channel_id, channel_data.name, romanized_name, channel_data.description))
+                rclone_channel_images_to_cloud(channel_data.pfp, channel_data.banner)
+            except Exception as e:
+                print(f"Error encountered: {e}")
+                failed_file.write(f"{channel_id},{channel_name}\n")
+
+
 if __name__ == "__main__":
     # TODO: add commandline arguments support
     print("This script is not meant to be run directly. Please run server.py instead.")
