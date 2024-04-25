@@ -20,7 +20,8 @@ def download_youtube_banner_pfp_desc(channel_id: str, api_key: str ) -> ChannelD
     pfp_url = channel_data["items"][0]["snippet"]["thumbnails"]["default"]["url"]
     description = channel_data["items"][0]["snippet"]["description"]
     with open(f"{channel_id}_banner.jpg", "wb") as f:
-        f.write(requests.get(banner_url).content)
+        # additional processing to get the banner in the correct resolution
+        f.write(requests.get(banner_url+"=w2120-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj").content)
     with open(f"{channel_id}_pfp.jpg", "wb") as f:
         f.write(requests.get(pfp_url).content)
     return ChannelData(f"{channel_id}_banner.jpg", f"{channel_id}_pfp.jpg", channel_name, description)
