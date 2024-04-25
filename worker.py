@@ -143,7 +143,7 @@ def execute_server_worker(url: str, mode: int = 0):
 
 # This function should only be manually called when you want to generate
 # all channel images again
-def update_all_channels():
+def update_all_channels(override: bool = False):
     import csv
     hostname = CONFIG.get("database", "host")
     user = CONFIG.get("database", "user")
@@ -158,7 +158,7 @@ def update_all_channels():
             channel_id = row[0]
             channel_name = row[1]
             print(f"Processing channel {channel_id}...")
-            if server.check_row_exists("channels", "channel_id", channel_id):
+            if server.check_row_exists("channels", "channel_id", channel_id) and not override:
                 write_debug_log(f"Channel {channel_id} already exists in database. Skipping...")
                 continue
             try:
