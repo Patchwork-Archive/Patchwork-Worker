@@ -47,9 +47,6 @@ class BiliDownloader(VideoDownloader):
             self._write_to_log_deleted(video_url)
             os.remove(f"{self._output_dir}/video/{self._get_video_id(video_url)}.mp4")
             return
-        # Extra step. convert to webm
-        subprocess.run(f"ffmpeg -i {self._output_dir}/video/{self._get_video_id(video_url)}.mp4 -c:v libsvtav1 -preset 6 -crf 30 -g 240 -pix_fmt yuv420p10le -svtav1-params tune=0:film-grain=8 -c:a libopus -b:a 128k -deadline realtime {self._output_dir}/video/{self._get_video_id(video_url)}.webm", shell=True)
-        os.remove(f"{self._output_dir}/video/{self._get_video_id(video_url)}.mp4")
 
     def download_thumbnail(self, video_url: str):
         self._write_debug_log(f"Downloading thumbnail using yt-dlp {video_url}")
