@@ -13,10 +13,10 @@ class BiliDownloader(VideoDownloader):
         output_dir: str,
         log_skip_file: str = "logs/skipped.txt",
         log_deleted_file: str = "logs/deleted.txt",
-        cookies_file: str = "data/bilicookies.txt"
+        cookies_file: str = "bilicookies.txt"
     ):
         """
-        Creates a new YouTubeDownloader object
+        Creates a new BiliDownloader object
         :param output_dir: str - The directory to output the downloaded videos to
         :param log_skip_file: str - The file to log skipped videos to
         :param log_deleted_file: str - The file to log deleted videos to
