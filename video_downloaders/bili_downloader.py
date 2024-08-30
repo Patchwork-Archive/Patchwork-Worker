@@ -39,7 +39,7 @@ class BiliDownloader(VideoDownloader):
     def download_video(self, video_url: str, file_type:str="mp4"):
         self._write_debug_log(f"Downloading video using yt-dlp {video_url}")
         subprocess.run(
-            f'yt-dlp "{video_url}" -f "bestvideo+bestaudio" -o "{self._output_dir}/video/%(id)s.%(ext)s" --cookies "{self._cookies_file}" --add-metadata',
+            f'yt-dlp "{video_url}" -f "bestvideo+bestaudio" -o "{self._output_dir}/video/%(id)s.%(ext)s" --add-metadata',
             shell=True,
         )
         if os.path.getsize(f"{self._output_dir}/video/{self._get_video_id(video_url)}.mp4") > self._max_file_size_bytes:
