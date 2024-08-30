@@ -48,7 +48,7 @@ def rclone_channel_images_to_cloud(pfp_path: str, banner_path: str):
     os.remove(pfp_path)
     os.remove(banner_path)
 
-def update_database(video_data: dict):
+def update_database(video_data: dict, video_type: VideoType):
     hostname = CONFIG.get("database", "host")
     user = CONFIG.get("database", "user")
     password = CONFIG.get("database", "password")
@@ -66,11 +66,13 @@ def update_database(video_data: dict):
     romanized_title = katsu.romaji(video_data["title"])
     if server.insert_row("romanized", "video_id, romanized_title", (video_data["video_id"], romanized_title)) is False:
         write_debug_log("Error inserting romanization into database")
-    if server.check_row_exists("channels", "channel_id", video_data["channel_id"]) is False:
+    if server.check_row_exists("channels", "channel_id", video_data["channel_id"]) is False and video_type == VideoType.YOUTUBE:
         channel_data = channel_meta_archiver.download_youtube_banner_pfp_desc(video_data["channel_id"], CONFIG.get("youtube", "api_key"))
         romanized_name = katsu.romaji(channel_data.name)
         rclone_channel_images_to_cloud(channel_data.pfp, channel_data.banner)
         server.insert_row("channels", "channel_id, channel_name, romanized_name, description", (video_data["channel_id"], channel_data.name, romanized_name, channel_data.description))
+    if server.check_row_exists("channels", "channel_id", video_data["channel_id"]) is False and video_type == VideoType.BILIBILI:
+        print("[WARNING] Bilibili Channel Meta Description not supported yet!")
     server.close_connection()
 
 def archive_video(url: str, mode: int)->bool:
@@ -103,7 +105,7 @@ def archive_video(url: str, mode: int)->bool:
     video_downloader.download_video(url, "webm")
     video_downloader.download_thumbnail(url)
     video_metadata_dict = video_downloader.download_metadata(url)
-    update_database(video_metadata_dict)
+    update_database(video_metadata_dict, video_type)
     video_downloader.download_captions(url)
     return True
 
