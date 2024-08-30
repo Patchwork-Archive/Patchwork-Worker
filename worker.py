@@ -48,7 +48,7 @@ def rclone_channel_images_to_cloud(pfp_path: str, banner_path: str):
     os.remove(pfp_path)
     os.remove(banner_path)
 
-def update_database(video_data: dict, video_type: VideoType):
+def update_database(video_data: dict, video_type: VideoType, file_ext: str, file_size: float):
     hostname = CONFIG.get("database", "host")
     user = CONFIG.get("database", "user")
     password = CONFIG.get("database", "password")
@@ -62,6 +62,9 @@ def update_database(video_data: dict, video_type: VideoType):
         if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
             write_debug_log("Error inserting row into database")
             return
+    if server.insert_row("files", "video_id, size_mb, extension", (video_data["video_id"], file_size, file_ext)) is False:
+        write_debug_log("Error inserting file data into database")
+        return
     katsu = cutlet.Cutlet()
     romanized_title = katsu.romaji(video_data["title"])
     if server.insert_row("romanized", "video_id, romanized_title", (video_data["video_id"], romanized_title)) is False:
@@ -102,10 +105,10 @@ def archive_video(url: str, mode: int)->bool:
     if mode != 1 and archiver_api.video_is_archived(video_downloader._get_video_id(url)):
         write_debug_log("Video is already archived. Skipping...")
         return False
-    video_downloader.download_video(url, "webm")
+    file_ext, file_size = video_downloader.download_video(url)
     video_downloader.download_thumbnail(url)
     video_metadata_dict = video_downloader.download_metadata(url)
-    update_database(video_metadata_dict, video_type)
+    update_database(video_metadata_dict, video_type, file_ext, file_size)
     video_downloader.download_captions(url)
     return True
 

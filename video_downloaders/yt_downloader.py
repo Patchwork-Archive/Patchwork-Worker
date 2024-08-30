@@ -50,7 +50,10 @@ class YouTubeDownloader(VideoDownloader):
             return VideoType.VIDEO
 
 
-    def download_video(self, video_url: str, file_type: str = "webm"):
+    def download_video(self, video_url: str) -> tuple:
+        """
+        Downloads a video. Returns the file extension of the downloaded video
+        """
         self._write_debug_log(f"Downloading video using yt-dlp {video_url}")
         result = subprocess.run(
             f'yt-dlp "{video_url}" -f "bestvideo[height<=1080][ext=webm]+bestaudio" -o "{self._output_dir}/video/%(id)s.%(ext)s" --add-metadata --username oauth2 --password ""',
@@ -59,6 +62,7 @@ class YouTubeDownloader(VideoDownloader):
         
         video_id = self._get_video_id(video_url)
         video_path = f"{self._output_dir}/video/{video_id}.webm"
+        file_ext = "webm"
 
         if result.returncode != 0 or not os.path.exists(video_path):
             self._write_debug_log(f"WebM download failed for {video_url}, attempting MP4 download")
@@ -67,11 +71,15 @@ class YouTubeDownloader(VideoDownloader):
                 shell=True,
             )
             video_path = f"{self._output_dir}/video/{video_id}.mp4"
+            file_ext = "mp4" if result.returncode == 0 and os.path.exists(video_path) else None
 
-        if os.path.exists(video_path) and os.path.getsize(video_path) > self._max_file_size_bytes:
+        file_size = os.path.getsize(video_path)
+        if os.path.exists(video_path) and file_size > self._max_file_size_bytes:
             self._write_debug_log(f"Video {video_url} exceeds max file size. Deleting...")
             self._write_to_log_deleted(video_url)
             os.remove(video_path)
+            return None,0
+        return file_ext, round(file_size/(1024*1024), 2)
 
 
     def download_thumbnail(self, video_url: str):
