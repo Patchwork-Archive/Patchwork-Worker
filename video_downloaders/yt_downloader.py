@@ -19,6 +19,7 @@ class YouTubeDownloader(VideoDownloader):
         output_dir: str,
         log_skip_file: str = "logs/skipped.txt",
         log_deleted_file: str = "logs/deleted.txt",
+        cookies_file: str = "cookies.txt",
     ):
         """
         Creates a new YouTubeDownloader object
@@ -27,7 +28,8 @@ class YouTubeDownloader(VideoDownloader):
         :param log_deleted_file: str - The file to log deleted videos to
         """
         super().__init__(output_dir, log_skip_file, log_deleted_file)
-    
+        self.cookies = cookies_file
+
     def _get_video_id(self, video_url: str) -> str:
         """
         Tries multiple methods to get the video ID from a YouTube URL
@@ -39,7 +41,7 @@ class YouTubeDownloader(VideoDownloader):
             return video_url.split("=")[1]
         elif "youtu.be" in video_url:
             return video_url.split("/")[-1]
-    
+
     def identify_url_type(self, video_url: str) -> str:
         """
         Checks if the URL is a Video or a Playlist
@@ -56,10 +58,10 @@ class YouTubeDownloader(VideoDownloader):
         """
         self._write_debug_log(f"Downloading video using yt-dlp {video_url}")
         result = subprocess.run(
-            f'yt-dlp "{video_url}" -f "bestvideo[height<=1080][ext=webm]+bestaudio" -o "{self._output_dir}/video/%(id)s.%(ext)s" --add-metadata --username oauth2 --password ""',
+            f'yt-dlp "{video_url}" -f "bestvideo[height<=1080][ext=webm]+bestaudio" -o "{self._output_dir}/video/%(id)s.%(ext)s" --cookies {self.cookies} --add-metadata --username oauth2 --password ""',
             shell=True,
         )
-        
+
         video_id = self._get_video_id(video_url)
         video_path = f"{self._output_dir}/video/{video_id}.webm"
         file_ext = "webm"
@@ -67,7 +69,7 @@ class YouTubeDownloader(VideoDownloader):
         if result.returncode != 0 or not os.path.exists(video_path):
             self._write_debug_log(f"WebM download failed for {video_url}, attempting MP4 download")
             result = subprocess.run(
-                f'yt-dlp "{video_url}" -f "bestvideo[height<=1080][ext=mp4]+bestaudio" -o "{self._output_dir}/video/%(id)s.%(ext)s" --add-metadata --username oauth2 --password ""',
+                f'yt-dlp "{video_url}" -f "bestvideo[height<=1080][ext=mp4]+bestaudio" -o "{self._output_dir}/video/%(id)s.%(ext)s" --add-metadata --cookies {self.cookies} --username oauth2 --password ""',
                 shell=True,
             )
             video_path = f"{self._output_dir}/video/{video_id}.mp4"
@@ -85,7 +87,7 @@ class YouTubeDownloader(VideoDownloader):
     def download_thumbnail(self, video_url: str):
         self._write_debug_log(f"Downloading thumbnail using yt-dlp {video_url}")
         subprocess.run(
-            f'yt-dlp "{video_url}" --write-thumbnail --skip-download --convert-thumbnails jpg -o "{self._output_dir}/thumbnail/%(id)s.%(ext)s" --username oauth2 --password ""',
+            f'yt-dlp "{video_url}" --write-thumbnail --skip-download --convert-thumbnails jpg -o "{self._output_dir}/thumbnail/%(id)s.%(ext)s" --cookies {self.cookies} --username oauth2 --password ""',
             shell=True,
         )
 
@@ -113,7 +115,7 @@ class YouTubeDownloader(VideoDownloader):
             subtitle_formats = [line.split()[0] for line in output if "srv3" in line]
             self._write_debug_log(f"Found subtitle formats {subtitle_formats}")
             return subtitle_formats
-        
+
         def download_subs(url, subs, video_id):
             self._write_debug_log(f"Starting to download captions (srv3) for {url}")
             if len(subs) == 0:
@@ -124,7 +126,7 @@ class YouTubeDownloader(VideoDownloader):
                 try:
                     subprocess.check_output(['yt-dlp', '--sub-format', 'srv3', '--sub-lang', sub, '--write-sub',
                                             '--skip-download', '--output', self._output_dir+"/"+"captions/"+
-                                            video_id+'/%(id)s' +'.%(ext)s', url, '--username', 'oauth2', '--password', '""'], universal_newlines=True)
+                                            video_id+'/%(id)s' +'.%(ext)s', url, '--cookies', self.cookies, '--username', 'oauth2', '--password', '""'], universal_newlines=True)
                 except subprocess.CalledProcessError as e:
                     self._write_debug_log(f'!!!!! Error downloading subtitle: {e.output} !!!!!')
 
@@ -155,10 +157,10 @@ class YouTubeDownloader(VideoDownloader):
             Formats the description newlines to escape characters
             """
             return description.replace("\n", " \\n")
-        
+
         self._write_debug_log(f"Downloading metadata (.info.json) using yt-dlp {video_url}")
         subprocess.run(
-            f'yt-dlp --write-info-json -o "output/metadata/%(id)s.%(ext)s" --skip-download {video_url} --username oauth2 --password ""',
+            f'yt-dlp --write-info-json -o "output/metadata/%(id)s.%(ext)s" --skip-download {video_url} --cookies {self.cookies} --username oauth2 --password ""',
             shell=True,
         )
         video_obj = json.loads(open(f"output/metadata/{self._get_video_id(video_url)}.info.json", "r", encoding="utf-8").read())
