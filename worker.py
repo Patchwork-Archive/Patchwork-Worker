@@ -11,8 +11,47 @@ import shutil
 from archive_api import ArchiveAPI
 from datetime import datetime
 import cutlet
+import requests
+import configparser
+import argparse
+import json
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Patchwork Worker")
+    parser.add_argument("--db", action="store_true", help="Read the queue directly from DB instead of the API")
+    parser.add_argument("--update_all_channel_meta", action="store_true", help="Update all channel metadata")
+    return parser.parse_args()
+
+
+ERROR_WAIT_TIME = 500 # seconds
+COOLDOWN_WAIT_TIME = 250 # seconds
+
 
 CONFIG = file_util.read_config("config.ini")
+
+def send_heartbeat(status: str):
+    """
+    Sends a heartbeat to the server
+    :param: status: str
+    """
+    config = read_config("config.ini")
+    base_url = config.get("queue", "base_url")
+    password = config.get("queue", "worker_password")
+    name = config.get("queue", "worker_name")
+    headers = {'X-AUTHENTICATION': password}
+    requests.post(f"{base_url}/api/worker/heartbeat", headers=headers, data={"status": status, "name": name})
+
+
+def read_config(file_path: str):
+    """
+    Reads a config file and returns a dictionary of the config
+    :param: file_path: str
+    :return: dict
+    """
+    config = configparser.ConfigParser()
+    config.read(file_path)
+    return config
+
 
 def write_debug_log(message: str) -> None:
     """
@@ -58,7 +97,7 @@ def update_database(video_data: dict, video_type: VideoType, file_ext: str, file
     if server.check_row_exists("songs", "video_id", video_data["video_id"]):
         write_debug_log("Video already exists in database. Updating row instead...")
         server.execute_query(f"UPDATE songs SET title = '{video_data['title']}', channel_name = '{video_data['channel_name']}', channel_id = '{video_data['channel_id']}', upload_date = '{video_data['upload_date']}', description = '{video_data['description']}' WHERE video_id = '{video_data['video_id']}'")
-    else: 
+    else:
         if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
             write_debug_log("Error inserting row into database")
             return
@@ -176,6 +215,46 @@ def update_all_channels(override: bool = False):
                 failed_file.write(f"{channel_id},{channel_name}\n")
 
 
+def execute_next_task(args):
+    """
+    Execute the next archival task in queue
+    """
+    config = read_config("config.ini")
+    base_url = config.get("queue", "base_url")
+    password = config.get("queue", "worker_password")
+    send_heartbeat("Starting up archival")
+    if args.db:
+        # TODO: Add logic to use DB directly instead of through the API
+        pass
+    else:
+        headers = {'X-AUTHENTICATION': password}
+        next_video = requests.get(f"{base_url}/api/worker/next", headers=headers)
+        has_next_task = True
+        while has_next_task:
+            if next_video.status_code == 200:
+                print("Found video to archive. Starting...")
+                next_video_data = json.loads(next_video.text)
+                send_heartbeat("Archiving " + next_video_data["next_video"])
+                mode = next_video_data["mode"]
+                execute_server_worker(next_video_data["next_video"], mode)
+            elif next_video.status_code == 401:
+                print("Invalid credentials. The password may be incorrect")
+                send_heartbeat("Invalid credentials. The password may be incorrect")
+                has_next_task = False
+            else:
+                print("No videos to archive at this time. Cooling down...")
+                send_heartbeat("Idle. Waiting for work...")
+                has_next_task = False
+        print("No tasks remaining. Ending job for now. See you soon!")
+
+
+
 if __name__ == "__main__":
-    # TODO: add commandline arguments support
-    print("This script is not meant to be run directly. Please run server.py instead.")
+    """
+    Ideally should be run as a cronjob based on how often you want to check for work
+    """
+    args = parse_arguments()
+    if args.update_all_channel_meta:
+        update_all_channels(override=True)
+    else:
+        execute_next_task(args)
