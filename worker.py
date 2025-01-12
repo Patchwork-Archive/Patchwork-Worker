@@ -21,6 +21,7 @@ def parse_arguments():
     parser.add_argument("--db", action="store_true", help="Read the queue directly from DB instead of the API")
     parser.add_argument("--update_all_channel_meta", action="store_true", help="Update all channel metadata")
     parser.add_argument("--configpath", type=str, default="config.ini", help="Path to worker config.ini file")
+    parser.add_argument("--cookies", type=str, default="cookies.txt", help="Path to cookies file")
     return parser.parse_args()
 
 
@@ -132,7 +133,7 @@ def archive_video(url: str, mode: int)->bool:
         :return: VideoType
         """
         if "youtube.com" in url or "youtu.be" in url:
-            return VideoType.YOUTUBE, YouTubeDownloader(CONFIG.get("path", "output_dir"))
+            return VideoType.YOUTUBE, YouTubeDownloader(CONFIG.get("path", "output_dir"), cookies_file=CONFIG.get("youtube", "cookies"))
         elif "bilibili.com" in url:
             return VideoType.BILIBILI, BiliDownloader(CONFIG.get("path", "output_dir"))
         else:
