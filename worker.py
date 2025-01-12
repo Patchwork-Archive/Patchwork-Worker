@@ -20,6 +20,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Patchwork Worker")
     parser.add_argument("--db", action="store_true", help="Read the queue directly from DB instead of the API")
     parser.add_argument("--update_all_channel_meta", action="store_true", help="Update all channel metadata")
+    parser.add_argument("--configpath", type=str, default="config.ini", help="Path to worker config.ini file")
     return parser.parse_args()
 
 
@@ -219,7 +220,7 @@ def execute_next_task(args):
     """
     Execute the next archival task in queue
     """
-    config = read_config("config.ini")
+    config = read_config(args.configpath)
     base_url = config.get("queue", "base_url")
     password = config.get("queue", "worker_password")
     send_heartbeat("Starting up archival")
