@@ -27,7 +27,6 @@ def parse_arguments():
 ERROR_WAIT_TIME = 500 # seconds
 COOLDOWN_WAIT_TIME = 250 # seconds
 
-
 CONFIG = file_util.read_config("config.ini")
 
 def send_heartbeat(status: str):
@@ -221,6 +220,7 @@ def execute_next_task(args):
     Execute the next archival task in queue
     """
     config = read_config(args.configpath)
+    CONFIG = file_util.read_config(args.configpath)
     base_url = config.get("queue", "base_url")
     password = config.get("queue", "worker_password")
     send_heartbeat("Starting up archival")
