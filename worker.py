@@ -228,9 +228,9 @@ def execute_next_task(args):
         pass
     else:
         headers = {'X-AUTHENTICATION': password}
-        next_video = requests.get(f"{base_url}/api/worker/next", headers=headers)
         has_next_task = True
         while has_next_task:
+            next_video = requests.get(f"{base_url}/api/worker/next", headers=headers)
             if next_video.status_code == 200:
                 print("Found video to archive. Starting...")
                 next_video_data = json.loads(next_video.text)
