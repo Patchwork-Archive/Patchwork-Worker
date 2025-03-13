@@ -28,14 +28,11 @@ def parse_arguments():
 ERROR_WAIT_TIME = 500 # seconds
 COOLDOWN_WAIT_TIME = 250 # seconds
 
-CONFIG = file_util.read_config("config.ini")
-
-def send_heartbeat(status: str):
+def send_heartbeat(status: str, config: argparse.Namespace):
     """
     Sends a heartbeat to the server
     :param: status: str
     """
-    config = read_config("config.ini")
     base_url = config.get("queue", "base_url")
     password = config.get("queue", "worker_password")
     name = config.get("queue", "worker_name")
@@ -62,37 +59,38 @@ def write_debug_log(message: str) -> None:
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
 
 
-def rclone_to_cloud():
+def rclone_to_cloud(config: argparse.Namespace):
     """
     Uploads all files in output folder to respective S3 bucket locations
     """
     write_debug_log("Preparing to upload files to cloud...")
     write_debug_log("Upload video file to cloud using rclone")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","output_dir")}/video" "{CONFIG.get("path","rclone_video_target")}"', shell=True)
+    subprocess.run(f'{config.get("path","rclone_path")} -P copy "{config.get("path","output_dir")}/video" "{config.get("path","rclone_video_target")}"', shell=True)
     write_debug_log("Upload thumbnail file to cloud using rclone")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","output_dir")}/thumbnail" "{CONFIG.get("path","rclone_thumbnail_target")}"', shell=True)
+    subprocess.run(f'{config.get("path","rclone_path")} -P copy "{config.get("path","output_dir")}/thumbnail" "{config.get("path","rclone_thumbnail_target")}"', shell=True)
     write_debug_log("Upload metadata file to cloud using rclone")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","output_dir")}/metadata" "{CONFIG.get("path","rclone_metadata_target")}"', shell=True)
+    subprocess.run(f'{config.get("path","rclone_path")} -P copy "{config.get("path","output_dir")}/metadata" "{config.get("path","rclone_metadata_target")}"', shell=True)
     write_debug_log("Upload captions to cloud using rclone")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{CONFIG.get("path","output_dir")}/captions" "{CONFIG.get("path","rclone_captions_target")}"', shell=True)
+    subprocess.run(f'{config.get("path","rclone_path")} -P copy "{config.get("path","output_dir")}/captions" "{config.get("path","rclone_captions_target")}"', shell=True)
 
-def rclone_channel_images_to_cloud(pfp_path: str, banner_path: str):
+def rclone_channel_images_to_cloud(pfp_path: str, banner_path: str, config_path: str):
     """
     Uploads all channel images in output folder to respective S3 bucket locations
     """
+    config = read_config(config_path)
     write_debug_log("Preparing to upload channel images to cloud...")
     write_debug_log("Upload banner file to cloud using rclone")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{banner_path}" "{CONFIG.get("path","rclone_banner_target")}"', shell=True)
+    subprocess.run(f'{config.get("path","rclone_path")} -P copy "{banner_path}" "{config.get("path","rclone_banner_target")}"', shell=True)
     write_debug_log("Upload pfp file to cloud using rclone")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} -P copy "{pfp_path}" "{CONFIG.get("path","rclone_pfp_target")}"', shell=True)
+    subprocess.run(f'{config.get("path","rclone_path")} -P copy "{pfp_path}" "{config.get("path","rclone_pfp_target")}"', shell=True)
     os.remove(pfp_path)
     os.remove(banner_path)
 
-def update_database(video_data: dict, video_type: VideoType, file_ext: str, file_size: float):
-    hostname = CONFIG.get("database", "host")
-    user = CONFIG.get("database", "user")
-    password = CONFIG.get("database", "password")
-    database = CONFIG.get("database", "database")
+def update_database(video_data: dict, video_type: VideoType, file_ext: str, file_size: float, config: argparse.Namespace):
+    hostname = config.get("database", "host")
+    user = config.get("database", "user")
+    password = config.get("database", "password")
+    database = config.get("database", "database")
     server = SQLHandler(hostname, user, password, database)
     headers = "video_id, title, channel_name, channel_id, upload_date, description"
     if server.check_row_exists("songs", "video_id", video_data["video_id"]):
@@ -110,7 +108,7 @@ def update_database(video_data: dict, video_type: VideoType, file_ext: str, file
     if server.insert_row("romanized", "video_id, romanized_title", (video_data["video_id"], romanized_title)) is False:
         write_debug_log("Error inserting romanization into database")
     if server.check_row_exists("channels", "channel_id", video_data["channel_id"]) is False and video_type == VideoType.YOUTUBE:
-        channel_data = channel_meta_archiver.download_youtube_banner_pfp_desc(video_data["channel_id"], CONFIG.get("youtube", "api_key"))
+        channel_data = channel_meta_archiver.download_youtube_banner_pfp_desc(video_data["channel_id"], config.get("youtube", "api_key"))
         romanized_name = katsu.romaji(channel_data.name)
         rclone_channel_images_to_cloud(channel_data.pfp, channel_data.banner)
         server.insert_row("channels", "channel_id, channel_name, romanized_name, description", (video_data["channel_id"], channel_data.name, romanized_name, channel_data.description))
@@ -118,24 +116,24 @@ def update_database(video_data: dict, video_type: VideoType, file_ext: str, file
         print("[WARNING] Bilibili Channel Meta Description not supported yet!")
     server.close_connection()
 
-def archive_video(url: str, mode: int)->bool:
+def archive_video(url: str, mode: int, config: argparse.Namespace)->bool:
     """
     Runs through the full routine of downloading a video, thumbnail, metadata, and captions
     :param url: str
     :param force: int - 0 for normal archival, 1 for force archival
     """
     write_debug_log(f"New task received: {url} || Beginning archival...")
-    if os.path.exists(CONFIG.get("path", "output_dir")):
-        shutil.rmtree(CONFIG.get("path", "output_dir"))
+    if os.path.exists(config.get("path", "output_dir")):
+        shutil.rmtree(config.get("path", "output_dir"))
     def classify_video_type() -> tuple:
         """
         Classifies the video type based on the URL
         :return: VideoType
         """
         if "youtube.com" in url or "youtu.be" in url:
-            return VideoType.YOUTUBE, YouTubeDownloader(CONFIG.get("path", "output_dir"), cookies_file=CONFIG.get("youtube", "cookies"))
+            return VideoType.YOUTUBE, YouTubeDownloader(config.get("path", "output_dir"), cookies_file=config.get("youtube", "cookies"))
         elif "bilibili.com" in url:
-            return VideoType.BILIBILI, BiliDownloader(CONFIG.get("path", "output_dir"))
+            return VideoType.BILIBILI, BiliDownloader(config.get("path", "output_dir"))
         else:
             return None
     video_type  = classify_video_type()[0]
@@ -148,25 +146,25 @@ def archive_video(url: str, mode: int)->bool:
     file_ext, file_size = video_downloader.download_video(url)
     video_downloader.download_thumbnail(url)
     video_metadata_dict = video_downloader.download_metadata(url)
-    update_database(video_metadata_dict, video_type, file_ext, file_size)
+    update_database(video_metadata_dict, video_type, file_ext, file_size, config)
     video_downloader.download_captions(url)
     return True
 
-def delete_archived_video(video_id: str):
+def delete_archived_video(video_id: str, config: argparse.Namespace):
     """
     Deletes an archived video from the archive
     :param video_id: str
     """
     print(f"Deleting video {video_id} from archive...")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_video_target")}/{video_id}.webm"', shell=True)
+    subprocess.run(f'{config.get("path","rclone_path")} delete "{config.get("path","rclone_video_target")}/{video_id}.webm"', shell=True)
     print(f"Deleting thumbnail {video_id} from archive...")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_thumbnail_target")}/{video_id}.jpg"', shell=True)
+    subprocess.run(f'{config.get("path","rclone_path")} delete "{config.get("path","rclone_thumbnail_target")}/{video_id}.jpg"', shell=True)
     print(f"Deleting metadata {video_id} from archive...")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_metadata_target")}/{video_id}.info.json"', shell=True)
+    subprocess.run(f'{config.get("path","rclone_path")} delete "{config.get("path","rclone_metadata_target")}/{video_id}.info.json"', shell=True)
     print(f"Deleting captions {video_id} from archive...")
-    subprocess.run(f'{CONFIG.get("path","rclone_path")} delete "{CONFIG.get("path","rclone_captions_target")}/{video_id}"', shell=True)
+    subprocess.run(f'{config.get("path","rclone_path")} delete "{config.get("path","rclone_captions_target")}/{video_id}"', shell=True)
 
-def execute_server_worker(url: str, mode: int = 0):
+def execute_server_worker(url: str, mode: int = 0, config: argparse.Namespace=None):
     """
     To be executed through server.py when deploying an automatic archival
     :param url: str
@@ -174,26 +172,27 @@ def execute_server_worker(url: str, mode: int = 0):
     """
     try:
         if mode == 2:
-            delete_archived_video(url)
-            discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url, "Video deleted from archive.")
+            delete_archived_video(url, config)
+            discord_webhook.send_completed_message(config.get("discord", "webhook"), url, "Video deleted from archive.")
             return
-        archive_result = archive_video(url, mode)
+        archive_result = archive_video(url, mode, config)
         if archive_result is False:
             return
-        rclone_to_cloud()
-        discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url)
+        rclone_to_cloud(config)
+        discord_webhook.send_completed_message(config.get("discord", "webhook"), url)
     except Exception as e:
         write_debug_log(f"Error encountered: {e}")
-        discord_webhook.send_completed_message(CONFIG.get("discord", "webhook"), url, f"An error occurred while archiving the following video:\n\n{url}\n\nError: {e}")
+        discord_webhook.send_completed_message(config.get("discord", "webhook"), url, f"An error occurred while archiving the following video:\n\n{url}\n\nError: {e}")
 
 # This function should only be manually called when you want to generate
 # all channel images again
-def update_all_channels(override: bool = False):
+def update_all_channels(override: bool = False, config_path = None):
+    config = read_config(config_path)
     import csv
-    hostname = CONFIG.get("database", "host")
-    user = CONFIG.get("database", "user")
-    password = CONFIG.get("database", "password")
-    database = CONFIG.get("database", "database")
+    hostname = config.get("database", "host")
+    user = config.get("database", "user")
+    password = config.get("database", "password")
+    database = config.get("database", "database")
     katsu = cutlet.Cutlet()
     server = SQLHandler(hostname, user, password, database)
     failed_file = open('failed_channels.csv', 'w')
@@ -207,7 +206,7 @@ def update_all_channels(override: bool = False):
                 write_debug_log(f"Channel {channel_id} already exists in database. Skipping...")
                 continue
             try:
-                channel_data = channel_meta_archiver.download_youtube_banner_pfp_desc(channel_id, CONFIG.get("youtube", "api_key"))
+                channel_data = channel_meta_archiver.download_youtube_banner_pfp_desc(channel_id, config.get("youtube", "api_key"))
                 romanized_name = katsu.romaji(channel_data.name)
                 server.insert_row("channels", "channel_id, channel_name, romanized_name, description", (channel_id, channel_data.name, romanized_name, channel_data.description))
                 rclone_channel_images_to_cloud(channel_data.pfp, channel_data.banner)
@@ -221,10 +220,9 @@ def execute_next_task(args):
     Execute the next archival task in queue
     """
     config = read_config(args.configpath)
-    CONFIG = file_util.read_config(args.configpath)
     base_url = config.get("queue", "base_url")
     password = config.get("queue", "worker_password")
-    send_heartbeat("Starting up archival")
+    send_heartbeat("Starting up archival", config)
     if args.db:
         # TODO: Add logic to use DB directly instead of through the API
         pass
@@ -236,16 +234,16 @@ def execute_next_task(args):
             if next_video.status_code == 200:
                 print("Found video to archive. Starting...")
                 next_video_data = json.loads(next_video.text)
-                send_heartbeat("Archiving " + next_video_data["next_video"])
+                send_heartbeat("Archiving " + next_video_data["next_video"], config)
                 mode = next_video_data["mode"]
-                execute_server_worker(next_video_data["next_video"], mode)
+                execute_server_worker(next_video_data["next_video"], mode, config)
             elif next_video.status_code == 401:
                 print("Invalid credentials. The password may be incorrect")
                 send_heartbeat("Invalid credentials. The password may be incorrect")
                 has_next_task = False
             else:
                 print("No videos to archive at this time. Cooling down...")
-                send_heartbeat("Idle. Waiting for work...")
+                send_heartbeat("Idle. Waiting for work...", config)
                 has_next_task = False
         print("No tasks remaining. Ending job for now. See you soon!")
 
@@ -257,6 +255,6 @@ if __name__ == "__main__":
     """
     args = parse_arguments()
     if args.update_all_channel_meta:
-        update_all_channels(override=True)
+        update_all_channels(override=True, configpath=args.configpath)
     else:
         execute_next_task(args)
