@@ -20,6 +20,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Patchwork Worker")
     parser.add_argument("--db", action="store_true", help="Read the queue directly from DB instead of the API")
     parser.add_argument("--update_all_channel_meta", action="store_true", help="Update all channel metadata")
+    parser.add_argument("--channel_csv",  type=str, default="patchwork_channels.csv", help="Path to CSV file with each row as (channel_id, channel_name). Used for updating meta data")
     parser.add_argument("--configpath", type=str, default="config.ini", help="Path to worker config.ini file")
     parser.add_argument("--cookies", type=str, default="cookies.txt", help="Path to cookies file")
     return parser.parse_args()
@@ -185,7 +186,7 @@ def execute_server_worker(url: str, mode: int = 0, config: argparse.Namespace=No
 
 # This function should only be manually called when you want to generate
 # all channel images again
-def update_all_channels(override: bool = False, config_path = None):
+def update_all_channels(override: bool = False, config_path = None, csv_path = None):
     config = read_config(config_path)
     import csv
     hostname = config.get("database", "host")
@@ -195,7 +196,7 @@ def update_all_channels(override: bool = False, config_path = None):
     katsu = cutlet.Cutlet()
     server = SQLHandler(hostname, user, password, database)
     failed_file = open('failed_channels.csv', 'w')
-    with open('channels_patchwork.csv', 'r') as file:
+    with open(csv_path, 'r') as file:
         reader = csv.reader(file)
         for row in reader:
             channel_id = row[0]
@@ -254,6 +255,6 @@ if __name__ == "__main__":
     """
     args = parse_arguments()
     if args.update_all_channel_meta:
-        update_all_channels(override=True, configpath=args.configpath)
+        update_all_channels(override=True, config_path=args.configpath, csv_path=args.channel_csv)
     else:
         execute_next_task(args)
