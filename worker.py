@@ -209,7 +209,7 @@ def update_all_channels(override: bool = False, config_path = None, csv_path = N
                 channel_data = channel_meta_archiver.download_youtube_banner_pfp_desc(channel_id, config.get("youtube", "api_key"))
                 romanized_name = katsu.romaji(channel_data.name)
                 server.insert_row("channels", "channel_id, channel_name, romanized_name, description", (channel_id, channel_data.name, romanized_name, channel_data.description))
-                rclone_channel_images_to_cloud(channel_data.pfp, channel_data.banner)
+                rclone_channel_images_to_cloud(channel_data.pfp, channel_data.banner, config)
             except Exception as e:
                 print(f"Error encountered: {e}")
                 failed_file.write(f"{channel_id},{channel_name}\n")
