@@ -73,11 +73,10 @@ def rclone_to_cloud(config: argparse.Namespace):
     write_debug_log("Upload captions to cloud using rclone")
     subprocess.run(f'{config.get("path","rclone_path")} -P copy "{config.get("path","output_dir")}/captions" "{config.get("path","rclone_captions_target")}"', shell=True)
 
-def rclone_channel_images_to_cloud(pfp_path: str, banner_path: str, config_path: str):
+def rclone_channel_images_to_cloud(pfp_path: str, banner_path: str, config: argparse.Namespace):
     """
     Uploads all channel images in output folder to respective S3 bucket locations
     """
-    config = read_config(config_path)
     write_debug_log("Preparing to upload channel images to cloud...")
     write_debug_log("Upload banner file to cloud using rclone")
     subprocess.run(f'{config.get("path","rclone_path")} -P copy "{banner_path}" "{config.get("path","rclone_banner_target")}"', shell=True)
@@ -110,7 +109,7 @@ def update_database(video_data: dict, video_type: VideoType, file_ext: str, file
     if server.check_row_exists("channels", "channel_id", video_data["channel_id"]) is False and video_type == VideoType.YOUTUBE:
         channel_data = channel_meta_archiver.download_youtube_banner_pfp_desc(video_data["channel_id"], config.get("youtube", "api_key"))
         romanized_name = katsu.romaji(channel_data.name)
-        rclone_channel_images_to_cloud(channel_data.pfp, channel_data.banner)
+        rclone_channel_images_to_cloud(channel_data.pfp, channel_data.banner, config)
         server.insert_row("channels", "channel_id, channel_name, romanized_name, description", (video_data["channel_id"], channel_data.name, romanized_name, channel_data.description))
     if server.check_row_exists("channels", "channel_id", video_data["channel_id"]) is False and video_type == VideoType.BILIBILI:
         print("[WARNING] Bilibili Channel Meta Description not supported yet!")
