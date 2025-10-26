@@ -69,7 +69,7 @@ class YouTubeDownloader(VideoDownloader):
         if result.returncode != 0 or not os.path.exists(video_path):
             self._write_debug_log(f"WebM download failed for {video_url}, attempting MP4 download")
             result = subprocess.run(
-                f'yt-dlp "{video_url}" -f "bestvideo[height<=1080][ext=mp4]+bestaudio" -o "{self._output_dir}/video/%(id)s.%(ext)s" --add-metadata --cookies {self.cookies}',
+                f'yt-dlp "{video_url}" -o "{self._output_dir}/video/%(id)s.%(ext)s" --add-metadata --cookies {self.cookies}',
                 shell=True,
             )
             video_path = f"{self._output_dir}/video/{video_id}.mp4"
