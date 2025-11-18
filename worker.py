@@ -2,7 +2,7 @@ from video_downloaders.yt_downloader import YouTubeDownloader
 from video_downloaders.bili_downloader import BiliDownloader
 import channel_meta_archiver
 import subprocess
-import file_util
+import time
 from sql.sql_handler import SQLHandler
 import discord_webhook
 import os
@@ -23,6 +23,7 @@ def parse_arguments():
     parser.add_argument("--channel_csv",  type=str, default="patchwork_channels.csv", help="Path to CSV file with each row as (channel_id, channel_name). Used for updating meta data")
     parser.add_argument("--configpath", type=str, default="config.ini", help="Path to worker config.ini file")
     parser.add_argument("--cookies", type=str, default="cookies.txt", help="Path to cookies file")
+    parser.add_argument("--rebound", type=int, help="Time to wait before accessing DB after downloading (only useful if running on limited CPU)", required=False)
     return parser.parse_args()
 
 
@@ -116,7 +117,7 @@ def update_database(video_data: dict, video_type: VideoType, file_ext: str, file
         print("[WARNING] Bilibili Channel Meta Description not supported yet!")
     server.close_connection()
 
-def archive_video(url: str, mode: int, config: argparse.Namespace)->bool:
+def archive_video(url: str, mode: int, rebound: int, config: argparse.Namespace)->bool:
     """
     Runs through the full routine of downloading a video, thumbnail, metadata, and captions
     :param url: str
@@ -146,6 +147,10 @@ def archive_video(url: str, mode: int, config: argparse.Namespace)->bool:
     file_ext, file_size = video_downloader.download_video(url)
     video_downloader.download_thumbnail(url)
     video_metadata_dict = video_downloader.download_metadata(url)
+    if rebound > 0:
+        print(f"[WAIT] Enforcing mandatory rebound time before accessing DB ({rebound} seconds)")
+        time.sleep(rebound)
+        print("[OK] Continue. Thanks for waiting")
     update_database(video_metadata_dict, video_type, file_ext, file_size, config)
     video_downloader.download_captions(url)
     return True
@@ -164,18 +169,13 @@ def delete_archived_video(video_id: str, config: argparse.Namespace):
     print(f"Deleting captions {video_id} from archive...")
     subprocess.run(f'{config.get("path","rclone_path")} delete "{config.get("path","rclone_captions_target")}/{video_id}"', shell=True)
 
-def execute_server_worker(url: str, mode: int = 0, config: argparse.Namespace=None):
-    """
-    To be executed through server.py when deploying an automatic archival
-    :param url: str
-    :param mode: int - 0 for normal archival, 1 for force archival
-    """
+def execute_server_worker(url: str, mode: int = 0, rebound: int = 0, config: argparse.Namespace=None):
     try:
         if mode == 2:
             delete_archived_video(url, config)
             discord_webhook.send_completed_message(config.get("discord", "webhook"), url, "Video deleted from archive.")
             return
-        archive_result = archive_video(url, mode, config)
+        archive_result = archive_video(url, mode, rebound, config)
         if archive_result is False:
             return
         rclone_to_cloud(config)
@@ -236,7 +236,7 @@ def execute_next_task(args):
                 next_video_data = json.loads(next_video.text)
                 send_heartbeat("Archiving " + next_video_data["next_video"], config)
                 mode = next_video_data["mode"]
-                execute_server_worker(next_video_data["next_video"], mode, config)
+                execute_server_worker(next_video_data["next_video"], mode, args.rebound, config)
             elif next_video.status_code == 401:
                 print("Invalid credentials. The password may be incorrect")
                 send_heartbeat("Invalid credentials. The password may be incorrect")
