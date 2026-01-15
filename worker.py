@@ -96,7 +96,14 @@ def update_database(video_data: dict, video_type: VideoType, file_ext: str, file
     headers = "video_id, title, channel_name, channel_id, upload_date, description"
     if server.check_row_exists("songs", "video_id", video_data["video_id"]):
         write_debug_log("Video already exists in database. Updating row instead...")
-        server.execute_query(f"UPDATE songs SET title = '{video_data['title']}', channel_name = '{video_data['channel_name']}', channel_id = '{video_data['channel_id']}', upload_date = '{video_data['upload_date']}', description = '{video_data['description']}' WHERE video_id = '{video_data['video_id']}'")
+        update_data = {
+            "title": video_data["title"],
+            "channel_name": video_data["channel_name"],
+            "channel_id": video_data["channel_id"],
+            "upload_date": video_data["upload_date"],
+            "description": video_data["description"]
+        }
+        server.update_multiple_columns("songs", "video_id", video_data["video_id"], update_data)
     else:
         if server.insert_row("songs", headers, (video_data["video_id"], video_data["title"], video_data["channel_name"], video_data["channel_id"], video_data["upload_date"], video_data["description"])) is False:
             write_debug_log("Error inserting row into database")
